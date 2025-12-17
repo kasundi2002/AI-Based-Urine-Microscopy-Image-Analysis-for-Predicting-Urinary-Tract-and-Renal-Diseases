@@ -1,0 +1,18 @@
+
+---
+
+## ✅ GitHub Checklist (VERY IMPORTANT)
+
+✔ Backend code committed  
+✔ Folder structure visible  
+✔ `.pt` and `.pth` in `.gitignore`  
+✔ README explains model usage  
+✔ `/predict` endpoint working  
+✔ Swagger UI demoable  
+
+### `.gitignore`
+```gitignore
+*.pt
+*.pth
+__pycache__/
+.env
