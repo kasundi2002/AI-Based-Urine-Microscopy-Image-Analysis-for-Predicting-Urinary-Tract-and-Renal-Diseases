@@ -1,93 +1,35 @@
-# app/api/inference.py
+from fastapi import APIRouter, UploadFile, File, Form
+import cv2
+import numpy as np
 
-from fastapi import APIRouter, UploadFile, File
+# --- Microscopy models ---
 from app.models.wbc_detector import detect_wbc
 from app.models.yeast_detector import detect_yeast
 from app.models.ecoli_classifier import classify_ecoli
-from app.logic.uti_rules import decide_uti
+
+# --- Clinical models ---
 from app.models.clinical_dataset1 import predict_dataset1
 from app.models.clinical_dataset2 import predict_dataset2
-from fastapi import APIRouter, UploadFile, File, Form
 
-router = APIRouter(prefix="/predict", tags=["Inference"])
+# --- Segmentation models ---
+from app.models.wbc_segmenter import segment_wbc
+from app.models.yeast_segmenter import segment_yeast
 
-@router.post("/")
+# --- Logic ---
+from app.logic.uti_rules import decide_uti
+from app.logic.fusion import fuse_decisions, compute_confidence
+from app.logic.severity import compute_severity
+
+router = APIRouter(tags=["Inference"])
+
+
+# --------------------------------------------------
+# Image-only inference
+# --------------------------------------------------
+@router.post("/predict")
 async def predict(image: UploadFile = File(...)):
     image_bytes = await image.read()
 
-    wbc_count = detect_wbc(image_bytes)
-    yeast_count = detect_yeast(image_bytes)
-    ecoli_present = classify_ecoli(image_bytes)
-
-    uti_present = decide_uti(
-        wbc_count=wbc_count,
-        yeast_count=yeast_count,
-        ecoli_present=ecoli_present
-    )
-
-    return {
-        "wbc_count": wbc_count,
-        "yeast_count": yeast_count,
-        "ecoli_present": ecoli_present,
-        "uti_present": uti_present
-    }
-
-router = APIRouter(prefix="/predict_with_metadata", tags=["Inference"])
-
-def fuse_decisions(
-    image_uti: bool,
-    dataset2_lower_prob: float,
-    dataset2_upper_prob: float,
-    dataset1_prob: float
-) -> dict:
-    """
-    Hierarchical multi-modal fusion
-    """
-
-    # Final UTI decision
-    if image_uti:
-        final_uti = True
-    elif dataset2_lower_prob >= 0.7 or dataset2_upper_prob >= 0.7:
-        final_uti = True
-    elif dataset1_prob >= 0.8:
-        final_uti = True
-    else:
-        final_uti = False
-
-    # UTI type
-    if dataset2_upper_prob >= 0.7:
-        uti_type = "Upper UTI"
-    elif dataset2_lower_prob >= 0.7:
-        uti_type = "Lower UTI"
-    else:
-        uti_type = "Uncertain / Not classified"
-
-    return final_uti, uti_type
-
-
-@router.post("/predict_with_metadata")
-async def predict_with_metadata(
-    image: UploadFile = File(...),
-
-    # Dataset-1 (symptoms)
-    age: int = Form(...),
-    gender: int = Form(...),
-    dysuria: int = Form(...),
-    abd_pain: int = Form(...),
-    fever: int = Form(...),
-    polyuria: int = Form(...),
-
-    # Dataset-2 (clinical indicators)
-    temperature: float = Form(...),
-    nausea: int = Form(...),
-    lumbar_pain: int = Form(...),
-    urine_pushing: int = Form(...),
-    micturition_pain: int = Form(...),
-    urethral_burning: int = Form(...)
-):
-    image_bytes = await image.read()
-
-    # --- Microscopy ---
     wbc_count = detect_wbc(image_bytes)
     yeast_count = detect_yeast(image_bytes)
     ecoli_present = classify_ecoli(image_bytes)
@@ -98,7 +40,90 @@ async def predict_with_metadata(
         ecoli_present=ecoli_present
     )
 
-    # --- Dataset-1 ---
+    return {
+        "wbc_count": wbc_count,
+        "yeast_count": yeast_count,
+        "ecoli_present": ecoli_present,
+        "image_based_uti": image_based_uti
+    }
+
+
+# --------------------------------------------------
+# Image + metadata + optional segmentation
+# --------------------------------------------------
+@router.post("/predict_with_metadata")
+async def predict_with_metadata(
+    image: UploadFile = File(...),
+    include_segmentation: bool = Form(False),
+
+    # Dataset-1
+    age: int = Form(...),
+    gender: int = Form(...),
+    dysuria: int = Form(...),
+    abd_pain: int = Form(...),
+    fever: int = Form(...),
+    polyuria: int = Form(...),
+
+    # Dataset-2
+    temperature: float = Form(...),
+    nausea: int = Form(...),
+    lumbar_pain: int = Form(...),
+    urine_pushing: int = Form(...),
+    micturition_pain: int = Form(...),
+    urethral_burning: int = Form(...)
+):
+    # ------------------------------------------------
+    # Read image
+    # ------------------------------------------------
+    image_bytes = await image.read()
+
+    image_np = cv2.imdecode(
+        np.frombuffer(image_bytes, np.uint8),
+        cv2.IMREAD_COLOR
+    )
+    image_area = image_np.shape[0] * image_np.shape[1]
+
+    # ------------------------------------------------
+    # Microscopy (Detection)
+    # ------------------------------------------------
+    wbc_count = detect_wbc(image_bytes)
+    yeast_count = detect_yeast(image_bytes)
+    ecoli_present = classify_ecoli(image_bytes)
+
+    image_based_uti = decide_uti(
+        wbc_count=wbc_count,
+        yeast_count=yeast_count,
+        ecoli_present=ecoli_present
+    )
+
+    # ------------------------------------------------
+    # Optional Segmentation + Severity
+    # ------------------------------------------------
+    wbc_area = 0
+    yeast_area = 0
+
+    wbc_severity_label = "Not computed"
+    yeast_severity_label = "Not computed"
+
+    wbc_sev_score = 0.0
+    yeast_sev_score = 0.0
+
+    if include_segmentation:
+        if wbc_count > 0:
+            wbc_area, _ = segment_wbc(image_bytes)
+            wbc_severity_label, wbc_sev_score = compute_severity(
+                wbc_area, image_area
+            )
+
+        if yeast_count > 0:
+            yeast_area, _ = segment_yeast(image_bytes)
+            yeast_severity_label, yeast_sev_score = compute_severity(
+                yeast_area, image_area
+            )
+
+    # ------------------------------------------------
+    # Dataset-1 (Symptoms)
+    # ------------------------------------------------
     dataset1_prob = predict_dataset1({
         "age": age,
         "gender": gender,
@@ -108,7 +133,9 @@ async def predict_with_metadata(
         "polyuria": polyuria
     })
 
-    # --- Dataset-2 ---
+    # ------------------------------------------------
+    # Dataset-2 (Clinical indicators)
+    # ------------------------------------------------
     bladder_prob, renal_prob = predict_dataset2({
         "temperature": temperature,
         "nausea": nausea,
@@ -118,18 +145,40 @@ async def predict_with_metadata(
         "urethral_burning": urethral_burning
     })
 
-    # --- Fusion ---
+    # ------------------------------------------------
+    # Fusion + Confidence
+    # ------------------------------------------------
     final_uti, uti_type = fuse_decisions(
         image_uti=image_based_uti,
         dataset2_lower_prob=bladder_prob,
         dataset2_upper_prob=renal_prob,
-        dataset1_prob=dataset1_prob
+        dataset1_prob=dataset1_prob,
+        wbc_severity_score=wbc_sev_score,
+        yeast_severity_score=yeast_sev_score
     )
 
+    confidence_score = compute_confidence(
+        image_uti=image_based_uti,
+        dataset1_prob=dataset1_prob,
+        dataset2_lower_prob=bladder_prob,
+        dataset2_upper_prob=renal_prob,
+        wbc_severity_score=wbc_sev_score,
+        yeast_severity_score=yeast_sev_score
+    )
+
+    # ------------------------------------------------
+    # Response
+    # ------------------------------------------------
     return {
         "wbc_count": wbc_count,
         "yeast_count": yeast_count,
         "ecoli_present": ecoli_present,
+
+        "segmentation_used": include_segmentation,
+        "wbc_area": wbc_area,
+        "yeast_area": yeast_area,
+        "wbc_severity": wbc_severity_label,
+        "yeast_severity": yeast_severity_label,
 
         "image_based_uti": image_based_uti,
 
@@ -138,5 +187,6 @@ async def predict_with_metadata(
         "dataset2_renal_probability": round(renal_prob, 3),
 
         "final_uti": final_uti,
-        "uti_type": uti_type
+        "uti_type": uti_type,
+        "confidence_score": confidence_score
     }

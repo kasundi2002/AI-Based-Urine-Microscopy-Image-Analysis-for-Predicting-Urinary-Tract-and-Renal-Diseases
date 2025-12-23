@@ -49,3 +49,22 @@ Deep learning models were selected based on task-specific performance and infere
 
 ### Decision-Level Fusion
 All models are integrated at the decision level using a hierarchical rule-based fusion strategy. Microscopy evidence is given highest priority, followed by structured clinical indicators (Dataset-2), and finally symptom-based probabilities (Dataset-1). This design avoids data leakage, preserves dataset integrity, and reflects real-world clinical decision workflows.
+
+## Segmentation Modules (Optional but Value-Added)
+
+In addition to object detection, the system incorporates optional semantic segmentation models for selected urine particles.
+
+### Implemented Segmentation Models
+- **White Blood Cells (WBC)**: UNet++ with EfficientNet-B0 encoder
+- **Yeast Cells**: SegFormer-B2 transformer-based segmentation model
+
+### Purpose of Segmentation
+Segmentation enables quantification of particle burden and spatial extent, allowing severity assessment rather than binary presence detection.
+
+### Severity Metrics
+- Total segmented area
+- Area-normalized severity index
+- Rule-based severity grading (Mild / Moderate / Severe)
+
+### Design Decision
+Segmentation modules are optional and executed conditionally to reduce computational overhead while providing enhanced clinical interpretability when required.
