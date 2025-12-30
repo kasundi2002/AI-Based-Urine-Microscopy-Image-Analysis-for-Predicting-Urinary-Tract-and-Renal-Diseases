@@ -1,3 +1,23 @@
+# Data
+data/
+results/
+models/
+
+# Images
+*.png
+*.jpg
+*.jpeg
+
+# Model weights
+*.pth
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Python
+__pycache__/
+
+
 # OS / environment
 .DS_Store
 Thumbs.db
@@ -43,5 +63,6 @@ models/
 # IDE / editor
 .vscode/
 .idea/
+
 
 

@@ -61,6 +61,19 @@ Model depth, image size, and training hyperparameters are configured via **YAML 
 
 ---
 
+
+## EfficientNet-B2 Experiment
+
+- Input size: 260×260
+- Loss: BCEWithLogitsLoss
+- Optimizer: Adam
+- Metric for model selection: Recall (dysmorphic RBCs)
+- Train/Val/Test split: 70/15/15 (patient-independent)
+
+> Note: Dataset and trained models are not included due to size and privacy constraints.
+
+
+
 ### Dataset (Important Note)
 
 The dataset for this project consists of **urine microscopy RBC images** stored in a **private Google Drive** directory and is **not included** in this repository for:
@@ -209,5 +222,6 @@ If you use or extend this repository in your research, please consider:
 ### License
 
 Specify your license of choice here (e.g., MIT, Apache-2.0, or institutional license).
+
 
 
