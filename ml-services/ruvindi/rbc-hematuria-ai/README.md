@@ -72,6 +72,18 @@ Model depth, image size, and training hyperparameters are configured via **YAML 
 
 > Note: Dataset and trained models are not included due to size and privacy constraints.
 
+## Trained Model Weights
+
+The trained EfficientNet-B2 model weights are not stored in this repository
+due to GitHub file size constraints.
+
+They can be downloaded from:
+🔗 https://drive.google.com/file/d/1lZOMIjL2QvnwDj95fWvzy1qxEVMyC2qO/view?usp=drive_link
+
+Model details:
+- Architecture: EfficientNet-B2
+- Task: Isomorphic vs Dysmorphic RBC classification
+- Selection metric: F1-score & balanced morphology performance
 
 
 ### Dataset (Important Note)
