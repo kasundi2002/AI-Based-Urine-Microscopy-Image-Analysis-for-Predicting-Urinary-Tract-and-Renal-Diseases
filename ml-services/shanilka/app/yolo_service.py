@@ -3,6 +3,8 @@ import numpy as np
 from PIL import Image
 import io
 
+from app.cnn_service import classify_crop
+
 # Load YOLO model ONCE
 model = YOLO("models/best.pt")
 
@@ -18,10 +20,17 @@ def run_yolo(image_bytes):
         x1, y1, x2, y2 = map(int, box.xyxy[0])
         conf = float(box.conf[0])
 
-        detections.append({
-            "bbox": [x1, y1, x2, y2],
-            "confidence": conf
-        })
+        # Crop detected region
+        crop = image.crop((x1, y1, x2, y2))
+
+        # CNN verification
+        is_cast = classify_crop(crop)
+
+        if is_cast:
+            detections.append({
+                "bbox": [x1, y1, x2, y2],
+                "confidence": conf
+            })
 
     return {
         "cast_detected": len(detections) > 0,
