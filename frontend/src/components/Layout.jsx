@@ -48,8 +48,10 @@ const Layout = () => {
     switch (user.role) {
       case 'MLT':
         return [
-          { text: 'Dashboard', icon: <DashboardIcon />, path: '/mlt-dashboard' },
-          { text: 'Analysis', icon: <BiotechIcon />, path: '/mlt-dashboard' }, // Placeholder
+          { text: 'Dashboard', icon: <DashboardIcon />, path: '/mlt-dashboard?view=dashboard' },
+          { text: 'Analysis', icon: <BiotechIcon />, path: '/mlt-dashboard?view=analysis' },
+          { text: 'Results', icon: <AssignmentIcon />, path: '/mlt-dashboard?view=results' }, 
+          { text: 'Patients', icon: <PersonIcon />, path: '/mlt-dashboard?view=patients' },
         ];
       case 'CLINICIAN':
         return [

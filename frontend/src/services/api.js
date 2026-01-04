@@ -8,9 +8,10 @@ const MOCK_USERS = [
 ];
 
 const MOCK_PATIENTS = [
-  { id: 'p1', name: 'Alice Johnson', age: 34, status: 'Awaiting Analysis', date: '2023-10-27' },
-  { id: 'p2', name: 'Bob Williams', age: 56, status: 'Ready for Review', date: '2023-10-26' },
-  { id: 'p3', name: 'Charlie Brown', age: 22, status: 'Completed', date: '2023-10-25' },
+  { id: 'P01', name: 'Kane Peter', age: 24, status: 'Awaiting Analysis', date: '2025-10-20', riskAssessment: 'Pending' },
+  { id: 'P02', name: 'Kane Peter', age: 35, status: 'Ready for Review', date: '2025-10-20', riskAssessment: 'High' },
+  { id: 'P03', name: 'Kane Peter', age: 44, status: 'Completed', date: '2025-10-20', riskAssessment: 'Normal' },
+  { id: 'P04', name: 'Kane Peter', age: 18, status: 'Completed', date: '2025-10-20', riskAssessment: 'Normal' },
 ];
 
 const MOCK_REPORTS = [
