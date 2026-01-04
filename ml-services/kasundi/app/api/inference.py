@@ -110,13 +110,27 @@ async def predict_with_metadata(
 
     if include_segmentation:
         if wbc_count > 0:
-            wbc_area, _ = segment_wbc(image_bytes)
+            # segmenters may return (area,), (area, mask) or (area, mask, overlay)
+            res = segment_wbc(image_bytes)
+            if isinstance(res, (list, tuple)):
+                wbc_area = res[0] if len(res) >= 1 else 0
+            else:
+                # if the function returns a scalar
+                wbc_area = res if isinstance(res, (int, float)) else 0
+
             wbc_severity_label, wbc_sev_score = compute_severity(
                 wbc_area, image_area
             )
 
         if yeast_count > 0:
-            yeast_area, _ = segment_yeast(image_bytes)
+            # segmenters may return (area,), (area, mask) or (area, mask, overlay)
+            res = segment_yeast(image_bytes)
+            if isinstance(res, (list, tuple)):
+                yeast_area = res[0] if len(res) >= 1 else 0
+            else:
+                # if the function returns a scalar
+                yeast_area = res if isinstance(res, (int, float)) else 0
+
             yeast_severity_label, yeast_sev_score = compute_severity(
                 yeast_area, image_area
             )
