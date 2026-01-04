@@ -14,5 +14,6 @@
 ```gitignore
 *.pt
 *.pth
+*.pkl
 __pycache__/
 .env

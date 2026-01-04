@@ -21,6 +21,95 @@ This repository contains the backend system for automated analysis of urine micr
         │ ├── yeast/
         │ └── bacteria/
 
+## System Architecture and Inference Flow
+
+The backend is designed as a **modular, multi-stage inference pipeline** that integrates microscopy image analysis with structured clinical data to produce an interpretable UTI diagnosis.
+
+### High-Level Architecture
+
+The system follows a **hybrid architecture** combining:
+- Deep learning–based urine microscopy analysis
+- Classical machine learning models for clinical data
+- Rule-based hierarchical decision fusion
+
+Each component operates independently and is integrated only at the **decision level**, ensuring modularity, interpretability, and prevention of data leakage.
+
+---
+
+### Inference Pipeline Overview
+
+At inference time, the system executes the following steps:
+
+1. **Input Acquisition**
+   - Urine microscopy image (mandatory)
+   - Patient metadata (optional)
+     - Symptom data (Dataset-1)
+     - Clinical indicators (Dataset-2)
+     - Optional segmentation toggle
+
+2. **Microscopy-Based Analysis**
+   - **WBC Detection**: Object detection model estimates white blood cell count
+   - **Yeast Detection**: Object detection model estimates yeast count
+   - **Bacteria Classification**: Image-level classifier predicts *E. coli* presence
+
+3. **Image-Based UTI Decision**
+   - A rule-based module evaluates microscopy findings to infer image-based UTI likelihood
+
+4. **Optional Segmentation and Severity Estimation**
+   - Semantic segmentation is applied to detected particles (if enabled)
+   - Segmented area is normalized by image size
+   - Severity is quantified as a continuous score and mapped to categorical labels  
+     *(Mild / Moderate / Severe)*
+
+5. **Clinical Data Prediction**
+   - **Dataset-1**: Symptom-based model produces a weak UTI probability prior
+   - **Dataset-2**: Clinical indicator model predicts probabilities for lower and upper UTI
+
+6. **Multi-Modal Decision Fusion**
+   - Image-based decision
+   - Clinical probabilities
+   - Severity scores
+   - Hierarchical rule-based logic combines all evidence into a final diagnosis
+
+7. **Confidence Estimation**
+   - A confidence score is computed based on agreement across modalities
+
+8. **Output Generation**
+   - Final UTI decision
+   - UTI type *(Lower / Upper / Uncertain)*
+   - Particle counts
+   - Severity indicators
+   - Confidence score
+
+---
+
+### Design Principles
+
+- **Modularity**: Each model is isolated and independently replaceable
+- **Interpretability**: Explicit severity grading and confidence estimation
+- **Scalability**: New particle detectors (e.g., RBCs, casts) can be added without refactoring
+- **Clinical Alignment**: Decision logic reflects real-world diagnostic workflows
+
+---
+
+### Model Deployment Strategy
+
+- All deep learning models are saved using **PyTorch `state_dict` format**
+- Model architectures are explicitly reconstructed during inference
+- Training checkpoints and framework-specific artifacts are excluded from deployment
+
+This strategy ensures long-term compatibility across environments and PyTorch versions.
+
+---
+
+### API Integration
+
+The system is deployed using **FastAPI** and exposes REST endpoints for inference:
+- `/predict` – image-only inference
+- `/predict_with_metadata` – image + clinical metadata + optional segmentation
+
+The API returns structured JSON outputs suitable for web applications, laboratory systems, and research pipelines.
+
 
 ## Model Weights
 

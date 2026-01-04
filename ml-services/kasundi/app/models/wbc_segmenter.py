@@ -26,7 +26,7 @@ MODEL_PATH = os.path.join(
 # RECREATE TRAINING ARCHITECTURE (THIS IS THE FIX)
 # --------------------------------------------------
 model = smp.UnetPlusPlus(
-    encoder_name="efficientnet-b4",   # ✅ CORRECT
+    encoder_name="efficientnet-b4",   
     encoder_weights=None,                  # already trained
     in_channels=3,
     classes=1,
