@@ -12,6 +12,9 @@ from app.crop_utils import crop_rbc_regions
 from app.model import load_model, predict_rbc
 from app.questionnaire import QUESTIONS
 from app.clinical_logic import generate_advice
+from app.schemas import QuestionnaireResponse
+from app.schemas import QuestionnaireAnswers
+
 
 app = FastAPI(title="RBC Morphology Analyzer")
 
@@ -49,12 +52,21 @@ async def analyze_image(file: UploadFile = File(...)):
         "hematuria_origin": origin
     }
 
+@app.post("/questionnaire/submit")
+def submit_questionnaire(data: QuestionnaireAnswers):
+    return {
+        "message": "Questionnaire submitted successfully",
+        "received_answers": data.answers
+    }
+@app.get("/questionnaire", response_model=QuestionnaireResponse)
+def get_questionnaire():
+    return {
+        "questions": QUESTIONS
+    }
 
-@app.get("/questionnaire")
-def get_questions():
-    return QUESTIONS
 
 @app.post("/final-report")
 def final_report(prediction: dict, answers: dict):
     report = generate_advice(prediction, answers)
     return report
+    

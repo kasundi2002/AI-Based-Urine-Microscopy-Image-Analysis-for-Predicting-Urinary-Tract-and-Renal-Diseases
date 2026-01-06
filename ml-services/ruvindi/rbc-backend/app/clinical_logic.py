@@ -1,34 +1,43 @@
-def generate_advice(prediction, answers):
-    dys_pct = prediction["dys_percentage"]
-    hematuria = prediction["hematuria_origin"]
+def generate_final_prediction(rbc_result: dict, answers: dict):
+    dys_percentage = rbc_result["dys_percentage"]
+    origin = rbc_result["hematuria_origin"]
 
     risk_score = 0
+    reasons = []
 
-    # Questionnaire-based scoring
-    for ans in answers.values():
-        if ans == "yes":
-            risk_score += 1
+    # --- Image-based logic ---
+    if dys_percentage >= 40:
+        risk_score += 2
+        reasons.append("High dysmorphic RBC percentage")
 
-    advice = []
+    if origin == "Glomerular":
+        risk_score += 2
+        reasons.append("Glomerular hematuria pattern detected")
 
-    # Image-based logic
-    if hematuria == "Glomerular":
-        advice.append("Findings suggest possible glomerular origin of hematuria.")
+    # --- Metadata-based logic ---
+    if answers.get("3") == "Yes":  # Pain/burning
+        risk_score += 1
+        reasons.append("Urinary discomfort reported")
+
+    if answers.get("8") == "Yes":  # Smoking
+        risk_score += 1
+        reasons.append("Smoking history")
+
+    if answers.get("9") == "Yes":  # Family history
+        risk_score += 1
+        reasons.append("Family history of urinary disease")
+
+    # --- Risk classification ---
+    if risk_score >= 4:
+        risk = "High"
+    elif risk_score >= 2:
+        risk = "Moderate"
     else:
-        advice.append("Findings suggest non-glomerular origin of hematuria.")
+        risk = "Low"
 
-    # Combined logic
-    if dys_pct > 40 and risk_score >= 4:
-        advice.append("Moderate to high risk. Clinical evaluation is recommended.")
-    elif dys_pct > 20:
-        advice.append("Mild abnormalities detected. Monitoring is advised.")
-    else:
-        advice.append("Low risk based on current findings.")
-
-    # Safety disclaimer
-    advice.append("This result is not a medical diagnosis.")
-
+    # --- Final output ---
     return {
-        "risk_score": risk_score,
-        "advice": advice
+        "risk_level": risk,
+        "final_prediction": f"Likely {origin.lower()} hematuria",
+        "clinical_reasons": reasons
     }
