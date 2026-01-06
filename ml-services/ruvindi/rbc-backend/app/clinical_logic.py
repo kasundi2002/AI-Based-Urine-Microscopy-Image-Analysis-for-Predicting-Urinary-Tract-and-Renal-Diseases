@@ -5,7 +5,6 @@ def generate_final_prediction(rbc_result: dict, answers: dict):
     risk_score = 0
     reasons = []
 
-    # --- Image-based logic ---
     if dys_percentage >= 40:
         risk_score += 2
         reasons.append("High dysmorphic RBC percentage")
@@ -14,20 +13,18 @@ def generate_final_prediction(rbc_result: dict, answers: dict):
         risk_score += 2
         reasons.append("Glomerular hematuria pattern detected")
 
-    # --- Metadata-based logic ---
-    if answers.get("3") == "Yes":  # Pain/burning
+    if answers.get("3") == "Yes":
         risk_score += 1
         reasons.append("Urinary discomfort reported")
 
-    if answers.get("8") == "Yes":  # Smoking
+    if answers.get("8") == "Yes":
         risk_score += 1
         reasons.append("Smoking history")
 
-    if answers.get("9") == "Yes":  # Family history
+    if answers.get("9") == "Yes":
         risk_score += 1
         reasons.append("Family history of urinary disease")
 
-    # --- Risk classification ---
     if risk_score >= 4:
         risk = "High"
     elif risk_score >= 2:
@@ -35,7 +32,6 @@ def generate_final_prediction(rbc_result: dict, answers: dict):
     else:
         risk = "Low"
 
-    # --- Final output ---
     return {
         "risk_level": risk,
         "final_prediction": f"Likely {origin.lower()} hematuria",
