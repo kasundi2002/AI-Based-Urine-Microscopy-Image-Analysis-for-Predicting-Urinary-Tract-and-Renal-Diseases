@@ -15,6 +15,8 @@ try:
 except Exception as e:
     with open("python_error.log", "w") as f:
         f.write(f"Import Error:\n{traceback.format_exc()}")
+    print(f"CRITICAL PIPELINE ERROR: {e}")
+    print(traceback.format_exc())
     sys.exit(1)
 
 # Configuration
