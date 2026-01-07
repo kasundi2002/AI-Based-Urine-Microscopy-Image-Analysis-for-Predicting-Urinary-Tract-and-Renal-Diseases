@@ -1,12 +1,14 @@
 import React from 'react';
-import { Box, Typography, Paper, Grid, Chip, LinearProgress } from '@mui/material';
+import { Box, Typography, Paper, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, TextField } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import ReplayIcon from '@mui/icons-material/Replay';
 
 const ImageContainer = styled(Box)(({ theme }) => ({
   position: 'relative',
   width: '100%',
-  height: 400,
-  backgroundColor: '#000',
+  height: 500, // Taller image area
+  backgroundColor: '#f5f5f5',
+  border: '1px solid #e0e0e0',
   borderRadius: theme.shape.borderRadius,
   overflow: 'hidden',
   display: 'flex',
@@ -17,37 +19,83 @@ const ImageContainer = styled(Box)(({ theme }) => ({
 const BoundingBox = styled(Box)(({ color }) => ({
   position: 'absolute',
   border: `2px solid ${color}`,
-  backgroundColor: `${color}33`, // 20% opacity
+  backgroundColor: 'transparent',
   '&:hover': {
-    backgroundColor: `${color}66`, // 40% opacity
+    backgroundColor: `${color}1a`, // low opacity on hover
     cursor: 'pointer',
   }
 }));
 
-const AnalysisView = ({ image, analysis }) => {
-  if (!image || !analysis) return null;
+const LabelTag = styled(Box)(({ color }) => ({
+   position: 'absolute', 
+   top: -24, 
+   left: -2,
+   backgroundColor: color, 
+   color: '#000', 
+   fontSize: '0.75rem', 
+   padding: '2px 6px',
+   borderRadius: 2,
+   fontWeight: 'bold',
+   whiteSpace: 'nowrap'
+}));
 
-  // Mock bounding boxes based on analysis
-  // In a real app, these coordinates would come from the backend
+const AnalysisView = ({ image, analysis }) => {
+  if (!image) return <Typography>No image loaded</Typography>;
+
+  // Mock analysis data if null (for preview)
+  const data = analysis || {
+    wbc: 5,
+    rbc: 2,
+    crystals: 'Calcium Oxalate',
+    risk: 45
+  };
+
+  const rows = [
+    { particle: 'Crystals', count: `Caox - 05\nUric Acid - 02` },
+    { particle: 'RBC', count: 'Caox - 05' }, // Mocking redundant data to match image style
+    { particle: 'WBC', count: 'Caox - 05' },
+    { particle: 'Cast', count: 'Caox - 05' },
+    { particle: 'Bacteria', count: 'Caox - 05' },
+  ];
+  
+  // Refined boxes based on image
   const boxes = [
-    { id: 1, type: 'WBC', x: 20, y: 30, w: 10, h: 10, color: '#00e5ff' },
-    { id: 2, type: 'RBC', x: 50, y: 60, w: 8, h: 8, color: '#ff1744' },
-    { id: 3, type: 'Crystal', x: 70, y: 20, w: 15, h: 15, color: '#ff9100' },
+    { id: 1, type: 'WBC', x: 25, y: 35, w: 8, h: 8, color: '#00bcd4' }, // Cyan
+    { id: 2, type: 'RBC', x: 55, y: 55, w: 7, h: 7, color: '#ff1744' }, // Red
+    { id: 3, type: 'Crystal', x: 70, y: 25, w: 12, h: 12, color: '#ff9100' }, // Orange
   ];
 
   return (
     <Box>
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>Microscopy Analysis</Typography>
-            <ImageContainer>
-              <img 
-                src={image} 
-                alt="Microscopy" 
-                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} 
-              />
-              {boxes.map(box => (
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+            MLT Workspace
+        </Typography>
+        <Button variant="contained" color="primary">
+            Submit Report
+        </Button>
+      </Box>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+          <Typography sx={{ mr: 2, fontWeight: 'bold' }}>Patient Name :</Typography>
+           <TextField 
+             variant="outlined" 
+             size="small" 
+             value="Anura kumara" 
+             sx={{ width: 300, bgcolor: 'background.paper' }}
+             InputProps={{ readOnly: true }}
+           />
+      </Box>
+
+      <Grid container spacing={4}>
+        <Grid item xs={12} md={6}>
+          <ImageContainer>
+            <img 
+              src={image} 
+              alt="Microscopy" 
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+            />
+             {boxes.map(box => (
                 <BoundingBox
                   key={box.id}
                   color={box.color}
@@ -58,72 +106,52 @@ const AnalysisView = ({ image, analysis }) => {
                     height: `${box.h}%`,
                   }}
                 >
-                  <Box 
-                    sx={{ 
-                      position: 'absolute', 
-                      top: -20, 
-                      left: 0, 
-                      bgcolor: box.color, 
-                      color: '#000', 
-                      fontSize: '0.75rem', 
-                      px: 0.5,
-                      borderRadius: 0.5,
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    {box.type}
-                  </Box>
+                  <LabelTag color={box.color}>
+                      {box.type}
+                  </LabelTag>
                 </BoundingBox>
               ))}
-            </ImageContainer>
-          </Paper>
+          </ImageContainer>
+          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+               <Button 
+                variant="contained" 
+                color="success" 
+                startIcon={<ReplayIcon />}
+                size="large"
+                sx={{ textTransform: 'none', px: 4 }}
+               >
+                   Re-Analyze
+               </Button>
+          </Box>
         </Grid>
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 2, height: '100%' }}>
-            <Typography variant="h6" gutterBottom>Findings</Typography>
-            
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle2" color="text.secondary">Risk Assessment</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, mb: 1 }}>
-                <Box sx={{ width: '100%', mr: 1 }}>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={analysis.risk} 
-                    color={analysis.risk > 70 ? 'error' : analysis.risk > 30 ? 'warning' : 'success'}
-                    sx={{ height: 10, borderRadius: 5 }}
-                  />
-                </Box>
-                <Box sx={{ minWidth: 35 }}>
-                  <Typography variant="body2" color="text.secondary">{`${analysis.risk}%`}</Typography>
-                </Box>
-              </Box>
-              <Typography variant="body2" color={analysis.risk > 70 ? 'error.main' : 'text.primary'}>
-                {analysis.risk > 70 ? 'High Risk of Pathologies' : 'Moderate Risk'}
-              </Typography>
-            </Box>
 
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>Particle Counts</Typography>
-            <Grid container spacing={1} sx={{ mb: 3 }}>
-              <Grid item xs={6}>
-                <Paper variant="outlined" sx={{ p: 1, textAlign: 'center' }}>
-                  <Typography variant="h4" color="primary">{analysis.wbc}</Typography>
-                  <Typography variant="caption">WBC / HPF</Typography>
-                </Paper>
-              </Grid>
-              <Grid item xs={6}>
-                <Paper variant="outlined" sx={{ p: 1, textAlign: 'center' }}>
-                  <Typography variant="h4" color="error">{analysis.rbc}</Typography>
-                  <Typography variant="caption">RBC / HPF</Typography>
-                </Paper>
-              </Grid>
-            </Grid>
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 4, height: '100%' }}>
+            <Typography variant="h6" sx={{ color: 'success.main', mb: 2 }}>Findings</Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>Particle Counts:</Typography>
 
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>Detected Features</Typography>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              {analysis.crystals === 'Present' && <Chip label="Crystals Detected" color="warning" size="small" />}
-              {analysis.wbc > 5 && <Chip label="Leukocyturia" color="primary" size="small" />}
-              {analysis.rbc > 3 && <Chip label="Hematuria" color="error" size="small" />}
-            </Box>
+            <TableContainer component={Box} sx={{ border: '1px solid #e0e0e0' }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                     <TableCell sx={{ fontWeight: 'bold', width: '30%' }}>Particle</TableCell>
+                     <TableCell sx={{ fontWeight: 'bold' }}>Count</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {rows.map((row, index) => (
+                    <TableRow key={index}>
+                      <TableCell sx={{ height: 60 }}>{row.particle}</TableCell>
+                      <TableCell>
+                          <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
+                            {row.count}
+                          </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Paper>
         </Grid>
       </Grid>

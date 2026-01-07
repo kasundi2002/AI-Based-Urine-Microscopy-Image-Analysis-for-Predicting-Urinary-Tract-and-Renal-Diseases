@@ -1,0 +1,7 @@
+flask
+flasgger
+ultralytics
+tensorflow
+opencv-python
+numpy
+werkzeug
