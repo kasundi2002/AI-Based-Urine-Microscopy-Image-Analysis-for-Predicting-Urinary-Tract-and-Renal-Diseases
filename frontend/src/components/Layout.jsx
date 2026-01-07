@@ -55,8 +55,9 @@ const Layout = () => {
         ];
       case 'CLINICIAN':
         return [
-          { text: 'Dashboard', icon: <DashboardIcon />, path: '/clinician-dashboard' },
-          { text: 'Patient Reviews', icon: <AssignmentIcon />, path: '/clinician-dashboard' }, // Placeholder
+          { text: 'Dashboard', icon: <DashboardIcon />, path: '/clinician-dashboard?view=dashboard' },
+          { text: 'Patient Management', icon: <PersonIcon />, path: '/clinician-dashboard?view=patients' },
+          { text: 'Diagnostic Review', icon: <AssignmentIcon />, path: '/clinician-dashboard?view=review' },
         ];
       case 'PATIENT':
         return [
