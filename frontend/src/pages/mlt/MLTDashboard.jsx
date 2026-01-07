@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import StatsDashboard from './StatsDashboard';
 import PatientQueue from './PatientQueue';
 import AnalysisWorkflow from './AnalysisWorkflow';
+import microscopyImage from '../../assets/c5.jpg';
 
 const MLTDashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
