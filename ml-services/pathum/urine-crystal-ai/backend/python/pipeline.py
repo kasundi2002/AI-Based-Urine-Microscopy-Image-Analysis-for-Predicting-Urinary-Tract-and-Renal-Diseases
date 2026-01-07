@@ -65,6 +65,16 @@ class UrineCrystalPipeline:
             # 1. Detect
             detections, original_img = self.detector.detect(image_path)
             
+            # Initialize counters
+            counts = {
+                "calcium_oxalate": 0,
+                "uric_acid": 0,
+                "calcium_phosphate": 0,
+                "struvite": 0,
+                "cystine": 0,
+                "other": 0
+            }
+            
             # 2. Process each detection
             for det in detections:
                 x1, y1, x2, y2 = det['box']
@@ -81,6 +91,22 @@ class UrineCrystalPipeline:
                     # 4. Classify
                     classification = self.classifier.classify(crop)
                     
+                    # Update counts
+                    cls_name = classification['class']
+                    # Map class names to standardized keys
+                    if "CaOx" in cls_name:
+                        counts["calcium_oxalate"] += 1
+                    elif "Uric_Acid" in cls_name:
+                        counts["uric_acid"] += 1
+                    elif "Phosphate" in cls_name:
+                        counts["calcium_phosphate"] += 1
+                    elif "Struvite" in cls_name:
+                        counts["struvite"] += 1
+                    elif "Cystine" in cls_name:
+                        counts["cystine"] += 1
+                    else:
+                        counts["other"] += 1
+
                     # 5. Aggregate
                     crystal_result = {
                         "bbox": [x1, y1, x2, y2],
@@ -91,7 +117,43 @@ class UrineCrystalPipeline:
                         "all_class_probabilities": classification['probabilities']
                     }
                     result_payload["crystals"].append(crystal_result)
-                    
+            
+            # Calculate Risk Level
+            total_crystals = sum(counts.values())
+            result_payload["crystal_count"] = total_crystals
+            
+            # Add specific counts to payload
+            for k, v in counts.items():
+                if v > 0: # Only add non-zero counts to keep it clean, or add all if preferred. User example showed specific keys.
+                     result_payload[k] = v
+                else:
+                     result_payload[k] = 0
+
+            # Determine Risk
+            if total_crystals >= 5:
+                result_payload["stone_risk_level"] = "High"
+            elif total_crystals >= 3:
+                result_payload["stone_risk_level"] = "Moderate"
+            else:
+                result_payload["stone_risk_level"] = "Low"
+
+            # Clinical Suggestion
+            if total_crystals == 0:
+                result_payload["clinical_suggestion"] = "No crystals detected. Maintain normal hydration."
+            else:
+                # Find dominant type
+                dominant_type = max(counts, key=counts.get)
+                if dominant_type == "calcium_oxalate":
+                    result_payload["clinical_suggestion"] = "Increased risk of calcium oxalate stone formation. Consider increasing fluid intake and reducing dietary oxalate."
+                elif dominant_type == "uric_acid":
+                    result_payload["clinical_suggestion"] = "Signs of acidic urine. Suggest hydration and alkalization therapy."
+                elif dominant_type == "calcium_phosphate":
+                    result_payload["clinical_suggestion"] = "Associated with alkaline urine. Check for underlying metabolic causes."
+                elif dominant_type == "struvite":
+                     result_payload["clinical_suggestion"] = "Strong association with urinary tract infections. Antibiotic treatment may be required."
+                else:
+                    result_payload["clinical_suggestion"] = "Crystals detected. Consult a nephrologist for further analysis."
+
         except Exception as e:
             result_payload["status"] = "error"
             result_payload["error"] = str(e)

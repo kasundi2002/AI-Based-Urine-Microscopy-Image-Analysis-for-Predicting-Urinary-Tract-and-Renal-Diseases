@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import microscopyImage from '../assets/c2.jpg';
 
 // Mock Data
 const MOCK_USERS = [
@@ -19,7 +20,7 @@ const MOCK_REPORTS = [
     id: 'r1',
     patientId: 'p2',
     patientName: 'Bob Williams',
-    image: 'https://via.placeholder.com/400x300?text=Microscopy+Image',
+    image: microscopyImage,
     findings: {
       wbc: 12,
       rbc: 5,
