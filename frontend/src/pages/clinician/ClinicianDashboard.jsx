@@ -1,64 +1,37 @@
 import React, { useState } from 'react';
-import { Box, Typography, Breadcrumbs, Link, Button } from '@mui/material';
-import NavigateNextIcon from '@mui/icons-material/NavigateNext';
-import ReviewQueue from './ReviewQueue';
+import { Box } from '@mui/material';
+import { useSearchParams } from 'react-router-dom';
+import ClinicianOverview from './ClinicianOverview';
+import DoctorPatientQueue from './DoctorPatientQueue';
 import DiagnosticView from './DiagnosticView';
-import VerificationPanel from './VerificationPanel';
-import LongitudinalView from './LongitudinalView';
 import { api } from '../../services/api';
 
 const ClinicianDashboard = () => {
-  const [currentView, setCurrentView] = useState('queue'); // queue, review
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentView = searchParams.get('view') || 'dashboard';
   const [selectedReport, setSelectedReport] = useState(null);
 
-  const handleSelectReport = async (reportStub) => {
-    // Fetch full report details
-    const fullReport = await api.getReport(reportStub.id);
-    setSelectedReport(fullReport);
-    setCurrentView('review');
+  const setView = (view) => {
+    setSearchParams({ view });
   };
 
-  const handleVerificationComplete = () => {
-    setCurrentView('queue');
-    setSelectedReport(null);
+  const handleSelectReport = (report) => {
+      setSelectedReport(report);
+      setView('review');
   };
 
   return (
     <Box>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: 'secondary.main' }}>
-          Clinician Workspace
-        </Typography>
-        <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} aria-label="breadcrumb">
-          <Link 
-            underline="hover" 
-            color="inherit" 
-            onClick={() => setCurrentView('queue')} 
-            sx={{ cursor: 'pointer' }}
-          >
-            Dashboard
-          </Link>
-          {currentView === 'review' && (
-            <Typography color="text.primary">Review: {selectedReport?.patientName}</Typography>
-          )}
-        </Breadcrumbs>
-      </Box>
-
-      {currentView === 'queue' && (
-        <Box>
-          <ReviewQueue onSelectReport={handleSelectReport} />
-          <LongitudinalView />
-        </Box>
+      {currentView === 'dashboard' && (
+        <ClinicianOverview onNavigate={setView} />
       )}
 
-      {currentView === 'review' && selectedReport && (
-        <Box>
-          <DiagnosticView report={selectedReport} />
-          <VerificationPanel report={selectedReport} onVerify={handleVerificationComplete} />
-          <Box sx={{ mt: 4 }}>
-            <LongitudinalView />
-          </Box>
-        </Box>
+      {currentView === 'patients' && (
+        <DoctorPatientQueue onSelectPatient={handleSelectReport} />
+      )}
+
+      {currentView === 'review' && (
+        <DiagnosticView report={selectedReport} />
       )}
     </Box>
   );
