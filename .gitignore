@@ -17,3 +17,4 @@
 *.pkl
 __pycache__/
 .env
+ml-services/pathum/
