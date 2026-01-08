@@ -1,38 +1,65 @@
 import React from 'react';
-import { Paper, Typography, Box } from '@mui/material';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip } from '@mui/material';
 
-const data = [
-  { date: 'Jan', risk: 10 },
-  { date: 'Mar', risk: 25 },
-  { date: 'Jun', risk: 45 },
-  { date: 'Sep', risk: 60 },
-  { date: 'Oct', risk: 55 },
-];
+const HistoryView = ({ onViewDetails }) => {
+  const history = [
+    { id: 1, date: 'Oct 26, 2023', risk: 'Low', score: 20, status: 'Reviewed', prescription: 'Maintain hydration.', doctorNote: 'Good progress.' },
+    { id: 2, date: 'Aug 15, 2023', risk: 'Moderate', score: 45, status: 'Reviewed', prescription: 'Reduce salt intake.', doctorNote: 'Monitor blood pressure.' },
+    { id: 3, date: 'Mar 10, 2023', risk: 'High', score: 78, status: 'Follow-up Complete', prescription: 'Immediate consultation required.', doctorNote: 'High crystal count detected.' },
+  ];
 
-const HistoryView = () => {
+  const getRiskColor = (risk) => {
+    switch (risk) {
+      case 'High': return 'error';
+      case 'Moderate': return 'warning';
+      default: return 'success';
+    }
+  };
+
   return (
-    <Paper sx={{ p: 3, height: 400 }}>
-      <Typography variant="h6" gutterBottom>My Health Trends</Typography>
-      <Typography variant="body2" color="text.secondary" gutterBottom>
-        Tracking your kidney stone risk probability over time.
-      </Typography>
-      <ResponsiveContainer width="100%" height="90%">
-        <LineChart
-          data={data}
-          margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-          <XAxis dataKey="date" stroke="#888" />
-          <YAxis stroke="#888" />
-          <Tooltip 
-            contentStyle={{ backgroundColor: '#132f4c', border: 'none', borderRadius: 8 }}
-            itemStyle={{ color: '#fff' }}
-          />
-          <Line type="monotone" dataKey="risk" stroke="#00e5ff" strokeWidth={3} name="Risk Score (%)" />
-        </LineChart>
-      </ResponsiveContainer>
-    </Paper>
+    <Box>
+      <Typography variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>Health History</Typography>
+      <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Risk Assessment</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Score</TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 'bold' }}>Action</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {history.map((row) => (
+              <TableRow key={row.id} hover>
+                <TableCell>{row.date}</TableCell>
+                <TableCell>
+                  <Chip 
+                    label={row.risk} 
+                    color={getRiskColor(row.risk)} 
+                    size="small" 
+                    variant="outlined"
+                  />
+                </TableCell>
+                <TableCell>{row.score}%</TableCell>
+                <TableCell>{row.status}</TableCell>
+                <TableCell align="right">
+                    <Typography 
+                        variant="button" 
+                        color="primary" 
+                        onClick={() => onViewDetails(row)}
+                        sx={{ cursor: 'pointer', textTransform: 'none', fontWeight: 'bold', '&:hover': { textDecoration: 'underline' } }}
+                    >
+                        View Details
+                    </Typography>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
   );
 };
 

@@ -9,6 +9,7 @@ import VideocamIcon from '@mui/icons-material/Videocam';
 import ImageUpload from './ImageUpload';
 import AnalysisView from './AnalysisView';
 import { api } from '../../services/api';
+import microscopyImage from '../../assets/c5.jpg'; // Import generic image for mock results
 
 const AnalysisWorkflow = ({ preSelectedPatient }) => {
   const [selectedPatient, setSelectedPatient] = useState(preSelectedPatient || null);
@@ -34,6 +35,21 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
   useEffect(() => {
     if (preSelectedPatient) {
         setSelectedPatient(preSelectedPatient);
+        
+        // Auto-load result if patient is already processed
+        if (preSelectedPatient.status === 'Ready for Review' || preSelectedPatient.status === 'Completed') {
+            setUploadedImage(microscopyImage);
+            setAnalysisResult({
+                wbc: 5,
+                rbc: 2,
+                crystals: 'Calcium Oxalate',
+                risk: 45
+            });
+        } else {
+            // Reset if new analysis needed
+            setAnalysisResult(null);
+            setUploadedImage(null);
+        }
     }
   }, [preSelectedPatient]);
 
@@ -65,7 +81,7 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
       }
     } catch (err) {
       console.error("Error accessing camera:", err);
-      alert("Could not access camera. Please check permissions.");
+      // alert("Could not access camera. Please check permissions."); // Suppress alert for better UX in mock
     }
   };
 
@@ -123,22 +139,41 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
             }} sx={{ mb: 2 }}>
                 &larr; New Analysis
             </Button>
-            <AnalysisView image={uploadedImage} analysis={analysisResult} />
+            <AnalysisView image={uploadedImage} analysis={analysisResult} patient={selectedPatient} />
           </Box>
       )
   }
 
   return (
-    <Box>
-       <Typography variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>
+    <Box sx={{ animation: 'fadeIn 0.5s ease-in-out' }}>
+        <style>
+            {`
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `}
+        </style>
+       <Typography variant="h5" sx={{ mb: 4, fontWeight: 'bold' }}>
             Analysis Workspace
        </Typography>
        
-       <Grid container spacing={3}>
+       <Grid container spacing={4}>
            {/* Left Panel: Patient Selection */}
            <Grid item xs={12} md={4}>
-               <Paper sx={{ p: 3, height: '100%' }}>
-                   <Typography variant="h6" gutterBottom>1. Select Patient</Typography>
+               <Paper sx={{ 
+                   p: 4, 
+                   height: '100%', 
+                   borderRadius: 3,
+                   borderBottom: '4px solid #00bcd4',
+                   transition: 'transform 0.2s',
+                   '&:hover': { transform: 'translateY(-4px)', boxShadow: 6 }
+               }}>
+                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                       <Box sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', mr: 2 }}>1</Box>
+                       <Typography variant="h6" fontWeight="bold">Select Patient</Typography>
+                   </Box>
+                   
                    <Autocomplete
                         options={patients}
                         getOptionLabel={getOptionLabel}
@@ -148,13 +183,20 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
                         sx={{ mb: 3 }}
                    />
                    
-                   {selectedPatient && (
-                       <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: 2 }}>
-                           <Typography variant="subtitle2">Selected Patient Details:</Typography>
-                           <Typography variant="body1" fontWeight="bold">{selectedPatient.name}</Typography>
-                           <Typography variant="body2">ID: {selectedPatient.id}</Typography>
-                           <Typography variant="body2">Age: {selectedPatient.age}</Typography>
-                           <Typography variant="body2">History: Recurrent Stones</Typography> 
+                   {selectedPatient ? (
+                       <Box sx={{ p: 3, bgcolor: 'rgba(0, 188, 212, 0.08)', borderRadius: 2, border: '1px solid rgba(0, 188, 212, 0.2)' }}>
+                           <Typography variant="subtitle2" color="primary.main" gutterBottom>SELECTED PATIENT</Typography>
+                           <Typography variant="h6" fontWeight="bold">{selectedPatient.name}</Typography>
+                           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>ID: {selectedPatient.id}</Typography>
+                           <Typography variant="body2" color="text.secondary">Age: {selectedPatient.age}</Typography>
+                           <Divider sx={{ my: 2 }} />
+                           <Typography variant="caption" sx={{ bgcolor: 'background.paper', px: 1, py: 0.5, borderRadius: 1, border: '1px solid divider' }}>
+                               History: Recurrent Stones
+                           </Typography>
+                       </Box>
+                   ) : (
+                       <Box sx={{ p: 4, textAlign: 'center', bgcolor: 'background.default', borderRadius: 2, border: '1px dashed divider' }}>
+                           <Typography variant="body2" color="text.secondary">No patient selected</Typography>
                        </Box>
                    )}
                </Paper>
@@ -162,29 +204,47 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
 
            {/* Right Panel: Image Input */}
            <Grid item xs={12} md={8}>
-               <Paper sx={{ p: 3, height: '100%' }}>
-                   <Typography variant="h6" gutterBottom>2. Acquire Image</Typography>
+               <Paper sx={{ 
+                   p: 4, 
+                   height: '100%',
+                   borderRadius: 3,
+                   borderBottom: '4px solid #00bcd4',
+                   opacity: selectedPatient ? 1 : 0.7,
+                   pointerEvents: selectedPatient ? 'auto' : 'none',
+                   transition: 'opacity 0.3s'
+               }}>
+                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                       <Box sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: selectedPatient ? 'primary.main' : 'action.disabled', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', mr: 2 }}>2</Box>
+                       <Typography variant="h6" fontWeight="bold" color={selectedPatient ? 'text.primary' : 'text.secondary'}>Acquire Image</Typography>
+                   </Box>
                    
                    {!selectedPatient ? (
-                        <Box sx={{ p: 5, textAlign: 'center', color: 'text.secondary' }}>
+                        <Box sx={{ p: 10, textAlign: 'center', color: 'text.secondary', border: '1px dashed divider', borderRadius: 2 }}>
                             <Typography>Please select a patient first to proceed with analysis.</Typography>
                         </Box>
                    ) : (
                        <>
-                        <Tabs value={inputMethod} onChange={handleTabChange} sx={{ mb: 3 }}>
+                        <Tabs 
+                            value={inputMethod} 
+                            onChange={handleTabChange} 
+                            sx={{ mb: 4, borderBottom: 1, borderColor: 'divider' }}
+                            indicatorColor="primary"
+                            textColor="primary"
+                        >
                             <Tab icon={<CloudUploadIcon />} label="Upload File" iconPosition="start" />
                             <Tab icon={<VideocamIcon />} label="Microscope Camera" iconPosition="start" />
                         </Tabs>
 
                         {analyzing ? (
                             <Box sx={{ p: 8, textAlign: 'center' }}>
-                                <CircularProgress />
-                                <Typography sx={{ mt: 2 }}>Analyzing Sample...</Typography>
+                                <CircularProgress size={60} thickness={4} />
+                                <Typography variant="h6" sx={{ mt: 3, fontWeight: 'bold' }}>Analyzing Sample...</Typography>
+                                <Typography variant="body2" color="text.secondary">Running AI detection for crystals and cells.</Typography>
                             </Box>
                         ) : (
                             <>
                                 {inputMethod === 0 && (
-                                    <Box>
+                                    <Box sx={{ p: 2 }}>
                                         <ImageUpload onUpload={handleAnalysis} />
                                     </Box>
                                 )}
@@ -192,22 +252,27 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
                                 {inputMethod === 1 && (
                                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                         {isCameraActive ? (
-                                            <Box sx={{ width: '100%', height: 400, bgcolor: '#000', mb: 2, display: 'flex', justifyContent: 'center' }}>
-                                                <video ref={videoRef} autoPlay playsInline style={{ maxWidth: '100%', maxHeight: '100%' }} />
-                                            </Box>
+                                            <Paper elevation={4} sx={{ width: '100%', height: 450, bgcolor: '#000', mb: 3, display: 'flex', justifyContent: 'center', overflow: 'hidden', borderRadius: 2 }}>
+                                                <video ref={videoRef} autoPlay playsInline style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                            </Paper>
                                         ) : (
-                                            <Box sx={{ width: '100%', height: 300, bgcolor: '#f5f5f5', mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <Typography variant="body2" color="text.secondary">Camera is off</Typography>
+                                            <Box sx={{ width: '100%', height: 300, bgcolor: 'background.default', mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 2, border: '1px dashed #666' }}>
+                                                <Typography variant="body1" color="text.secondary">Camera is currently inactive</Typography>
                                             </Box>
                                         )}
                                         
                                         <Button 
                                             variant="contained" 
-                                            color="primary" 
+                                            size="large"
                                             startIcon={<CameraAltIcon />} 
                                             onClick={captureImage}
                                             disabled={!isCameraActive}
-                                            size="large"
+                                            sx={{ 
+                                                py: 1.5, px: 4, 
+                                                borderRadius: 2,
+                                                background: isCameraActive ? 'linear-gradient(45deg, #f44336 30%, #ff1744 90%)' : undefined,
+                                                boxShadow: isCameraActive ? '0 3px 5px 2px rgba(255, 23, 68, .3)' : undefined
+                                            }}
                                         >
                                             Capture & Analyze
                                         </Button>
