@@ -8,6 +8,9 @@ from werkzeug.utils import secure_filename
 import cv2
 import numpy as np
 
+# Add custom library path for AI dependencies (workaround for long path issue)
+sys.path.append(r"C:\tmp\urine_ai_libs")
+
 # Ensure the python directory is in the path to import pipeline modules
 sys.path.append(os.path.join(os.path.dirname(__file__), 'python'))
 
@@ -46,7 +49,12 @@ try:
 except Exception as e:
     print(f"Failed to initialize pipeline: {e}")
 
+@app.route('/', methods=['GET'])
+def index():
+    return jsonify({"message": "Urine Crystal Analysis API", "swagger_ui": "/apidocs"}), 200
+
 @app.route('/health', methods=['GET'])
+@app.route('/api/health', methods=['GET'])
 def health_check():
     """
     Health check endpoint
