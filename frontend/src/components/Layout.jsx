@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { styled, useTheme } from '@mui/material/styles';
+import { styled, useTheme, alpha } from '@mui/material/styles';
 import { 
   Box, Toolbar, List, CssBaseline, Typography, Divider, IconButton, 
   ListItemButton, ListItemIcon, ListItemText, Avatar, Menu, MenuItem, 
@@ -172,14 +172,17 @@ const Layout = () => {
         </DrawerHeader>
         <Divider />
         <List>
-          {menuItems.map((item) => (
+          {menuItems.map((item) => {
+            const isSelected = location.pathname + location.search === item.path;
+            
+            return (
             <ListItemButton
               key={item.text}
               onClick={() => {
                   navigate(item.path);
                   if (isMobile) setMobileOpen(false);
               }}
-              selected={location.pathname === item.path}
+              selected={isSelected}
               sx={{
                 minHeight: 48,
                 justifyContent: open ? 'initial' : 'center',
@@ -187,11 +190,11 @@ const Layout = () => {
                 mb: 1,
                 borderRadius: 0,
                 '&.Mui-selected': {
-                    backgroundColor: 'rgba(0, 229, 255, 0.08)',
+                    backgroundColor: alpha(theme.palette.primary.main, 0.08),
                     borderRight: open ? `4px solid ${theme.palette.primary.main}` : 'none',
-                    '&:hover': { backgroundColor: 'rgba(0, 229, 255, 0.12)' }
+                    '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.12) }
                 },
-                '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.03)' },
+                '&:hover': { backgroundColor: alpha(theme.palette.text.primary, 0.04) },
               }}
             >
               <ListItemIcon
@@ -199,7 +202,7 @@ const Layout = () => {
                   minWidth: 0,
                   mr: open ? 3 : 'auto',
                   justifyContent: 'center',
-                  color: location.pathname === item.path ? 'primary.main' : 'text.secondary'
+                  color: isSelected ? 'primary.main' : 'text.secondary'
                 }}
               >
                 {item.icon}
@@ -207,13 +210,14 @@ const Layout = () => {
               <ListItemText 
                 primary={item.text} 
                 primaryTypographyProps={{ 
-                    fontWeight: location.pathname === item.path ? 'bold' : 'medium',
-                    fontSize: '1rem' 
+                    fontWeight: isSelected ? 'bold' : 'medium',
+                    fontSize: '1rem',
+                    color: isSelected ? 'primary.main' : 'text.primary'
                 }}
                 sx={{ opacity: open ? 1 : 0 }} 
               />
             </ListItemButton>
-          ))}
+          )})}
         </List>
       </>
   );

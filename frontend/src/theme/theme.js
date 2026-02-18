@@ -2,57 +2,80 @@ import { createTheme } from '@mui/material/styles';
 
 const theme = createTheme({
   palette: {
-    mode: 'dark',
+    mode: 'light',
     primary: {
-      main: '#00e5ff', // Cyan accent
-      contrastText: '#000',
+      main: '#00bcd4', // Cyan (darker for light mode contrast)
+      contrastText: '#fff',
     },
     secondary: {
-      main: '#7c4dff', // Deep Purple
+      main: '#673ab7', // Deep Purple
     },
     background: {
-      default: '#0a1929', // Dark Blue-Grey
-      paper: '#132f4c', // Slightly lighter
+      default: '#f5f7fa', // Very light grey/blue
+      paper: '#ffffff', // White
     },
     text: {
-      primary: '#fff',
-      secondary: 'rgba(255, 255, 255, 0.7)',
+      primary: '#1a2027', // Almost black
+      secondary: '#5f6c7b', // Dark grey
     },
     success: {
-      main: '#00e676',
+      main: '#2e7d32', // Darker green
     },
     error: {
-      main: '#ff1744',
+      main: '#d32f2f', // Darker red
     },
     warning: {
-      main: '#ff9100',
+      main: '#ed6c02', // Darker orange
     },
   },
   typography: {
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
     h1: {
+      fontFamily: '"Space Grotesk", sans-serif',
       fontWeight: 700,
       fontSize: '2.5rem',
+      letterSpacing: '-0.02em',
     },
     h2: {
+      fontFamily: '"Space Grotesk", sans-serif',
       fontWeight: 600,
       fontSize: '2rem',
+      letterSpacing: '-0.01em',
     },
     h3: {
+      fontFamily: '"Space Grotesk", sans-serif',
       fontWeight: 600,
       fontSize: '1.75rem',
+      letterSpacing: '-0.01em',
     },
     h4: {
+      fontFamily: '"Space Grotesk", sans-serif',
       fontWeight: 600,
       fontSize: '1.5rem',
     },
     h5: {
+      fontFamily: '"Space Grotesk", sans-serif',
       fontWeight: 500,
       fontSize: '1.25rem',
     },
     h6: {
+      fontFamily: '"Space Grotesk", sans-serif',
       fontWeight: 500,
       fontSize: '1rem',
+    },
+    subtitle1: {
+      fontFamily: '"Inter", sans-serif',
+      fontWeight: 500,
+    },
+    subtitle2: {
+      fontFamily: '"Inter", sans-serif',
+      fontWeight: 600,
+      letterSpacing: '0.02em',
+    },
+    button: {
+      fontFamily: '"Space Grotesk", sans-serif',
+      fontWeight: 600,
+      letterSpacing: '0.02em',
     },
   },
   components: {
