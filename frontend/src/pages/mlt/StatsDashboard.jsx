@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTheme } from '@mui/material/styles';
 import { Box, Grid, Paper, Typography, Card, CardContent } from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
@@ -58,10 +59,13 @@ const StatCard = ({ title, value, subtitle, icon, gradient }) => (
   </Card>
 );
 
+
 const StatsDashboard = () => {
+    const theme = useTheme();
+
   return (
     <Box>
-      <Typography variant="h4" sx={{ mb: 4, fontWeight: '900', letterSpacing: -0.5 }}>Overview</Typography>
+      <Typography variant="h4" sx={{ mb: 4, fontWeight: '900', letterSpacing: -0.5, color: 'text.primary' }}>Overview</Typography>
       
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={4}>
@@ -93,10 +97,10 @@ const StatsDashboard = () => {
         </Grid>
       </Grid>
 
-      <Paper sx={{ p: 4, borderRadius: 4, bgcolor: '#1a202c', color: 'white' }}>
+      <Paper sx={{ p: 4, borderRadius: 4, bgcolor: 'background.paper', color: 'text.primary' }}>
         <Box sx={{ mb: 4 }}>
             <Typography variant="h6" fontWeight="bold">Analytics Trends</Typography>
-            <Typography variant="body2" sx={{ opacity: 0.6 }}>Patient volume analysis over the last week</Typography>
+            <Typography variant="body2" color="text.secondary">Patient volume analysis over the last week</Typography>
         </Box>
         
         <Box sx={{ height: 450, width: '100%' }}>
@@ -104,34 +108,40 @@ const StatsDashboard = () => {
             <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                  <stop offset="5%" stopColor={theme.palette.primary.main} stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor={theme.palette.primary.main} stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.1)" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.palette.divider} />
               <XAxis 
                 dataKey="name" 
                 axisLine={false} 
                 tickLine={false} 
-                tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} 
+                tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} 
                 dy={15}
               />
               <YAxis 
                 axisLine={false} 
                 tickLine={false} 
-                tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} 
+                tick={{ fill: theme.palette.text.secondary, fontSize: 12 }} 
                 tickFormatter={(value) => `$${value/1000}k`}
                 dx={-10}
               />
               <Tooltip 
-                contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', backgroundColor: 'rgba(30, 41, 59, 0.95)', color: 'white' }}
-                itemStyle={{ color: '#fff' }}
-                cursor={{ stroke: 'rgba(255,255,255,0.2)', strokeWidth: 1 }}
+                contentStyle={{ 
+                    borderRadius: 12, 
+                    border: 'none', 
+                    boxShadow: theme.shadows[3], 
+                    backgroundColor: theme.palette.background.paper, 
+                    color: theme.palette.text.primary 
+                }}
+                itemStyle={{ color: theme.palette.primary.main }}
+                cursor={{ stroke: theme.palette.divider, strokeWidth: 1 }}
               />
               <Area 
                 type="monotone" 
                 dataKey="value" 
-                stroke="#6366f1" 
+                stroke={theme.palette.primary.main} 
                 strokeWidth={3} 
                 fillOpacity={1} 
                 fill="url(#colorValue)" 
