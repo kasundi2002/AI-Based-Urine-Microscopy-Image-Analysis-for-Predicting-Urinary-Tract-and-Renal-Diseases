@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import microscopyImage from '../assets/c2.jpg';
+import placeholderImage from '../assets/react.svg';
 
 // Mock Data
 const MOCK_USERS = [
@@ -20,7 +20,7 @@ const MOCK_REPORTS = [
     id: 'r1',
     patientId: 'p2',
     patientName: 'Bob Williams',
-    image: microscopyImage,
+    image: placeholderImage,
     findings: {
       wbc: 12,
       rbc: 5,
@@ -88,4 +88,36 @@ export const api = {
           }, 800);
       })
   }
+};
+
+// RBC Hematuria API (rbc-backend) - use proxy in dev to avoid CORS
+const RBC_API_BASE = import.meta.env.VITE_RBC_API_URL || '/api/rbc';
+
+export const rbcApi = {
+  analyze: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${RBC_API_BASE}/analyze`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  getQuestionnaire: async () => {
+    const res = await fetch(`${RBC_API_BASE}/questionnaire`);
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  submitQuestionnaire: async (answers) => {
+    const res = await fetch(`${RBC_API_BASE}/questionnaire/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
 };

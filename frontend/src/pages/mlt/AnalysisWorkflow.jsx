@@ -9,7 +9,7 @@ import VideocamIcon from '@mui/icons-material/Videocam';
 import ImageUpload from './ImageUpload';
 import AnalysisView from './AnalysisView';
 import { api } from '../../services/api';
-import microscopyImage from '../../assets/c5.jpg'; // Import generic image for mock results
+import placeholderImage from '../../assets/react.svg';
 
 const AnalysisWorkflow = ({ preSelectedPatient }) => {
   const [selectedPatient, setSelectedPatient] = useState(preSelectedPatient || null);
@@ -38,7 +38,7 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
         
         // Auto-load result if patient is already processed
         if (preSelectedPatient.status === 'Ready for Review' || preSelectedPatient.status === 'Completed') {
-            setUploadedImage(microscopyImage);
+            setUploadedImage(placeholderImage);
             setAnalysisResult({
                 wbc: 5,
                 rbc: 2,

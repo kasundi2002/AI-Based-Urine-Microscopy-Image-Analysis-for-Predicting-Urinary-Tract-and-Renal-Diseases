@@ -12,6 +12,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import BiotechIcon from '@mui/icons-material/Biotech';
+import BloodtypeIcon from '@mui/icons-material/Bloodtype';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -132,6 +133,7 @@ const Layout = () => {
         return [
           { text: 'Dashboard', icon: <DashboardIcon />, path: '/mlt-dashboard?view=dashboard' },
           { text: 'Analysis', icon: <BiotechIcon />, path: '/mlt-dashboard?view=analysis' },
+          { text: 'RBC Hematuria', icon: <BloodtypeIcon />, path: '/mlt-dashboard?view=rbc-hematuria' },
           { text: 'Results', icon: <AssignmentIcon />, path: '/mlt-dashboard?view=results' }, 
           { text: 'Patients', icon: <PersonIcon />, path: '/mlt-dashboard?view=patients' },
         ];

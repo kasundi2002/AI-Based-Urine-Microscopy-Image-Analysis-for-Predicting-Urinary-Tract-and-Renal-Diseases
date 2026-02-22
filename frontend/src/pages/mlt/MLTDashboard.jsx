@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import StatsDashboard from './StatsDashboard';
 import PatientQueue from './PatientQueue';
 import AnalysisWorkflow from './AnalysisWorkflow';
-import microscopyImage from '../../assets/c5.jpg';
+import RBCHematuriaWorkflow from './RBCHematuriaWorkflow';
 
 const MLTDashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -34,6 +34,10 @@ const MLTDashboard = () => {
 
       {currentView === 'analysis' && (
         <AnalysisWorkflow preSelectedPatient={selectedPatient} />
+      )}
+
+      {currentView === 'rbc-hematuria' && (
+        <RBCHematuriaWorkflow />
       )}
 
       {currentView === 'results' && (
