@@ -14,7 +14,7 @@ from app.clinical_logic import generate_final_prediction
 # -----------------------------
 app = FastAPI(title="RBC Morphology Analyzer")
 
-model = load_model("weights/efficientnet_b2_best.pth")
+model = load_model("weights/efficientnet_b33_best.pth")
 
 # -----------------------------
 # Temporary in-memory storage
