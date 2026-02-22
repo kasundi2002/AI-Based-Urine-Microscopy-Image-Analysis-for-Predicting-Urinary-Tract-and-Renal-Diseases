@@ -17,7 +17,7 @@ transform = transforms.Compose([
 
 def load_model(weight_path):
     model = timm.create_model(
-        "efficientnet_b2",
+        "efficientnet_b3",
         pretrained=False,
         num_classes=1
     )
