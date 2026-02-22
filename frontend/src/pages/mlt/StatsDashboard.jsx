@@ -6,6 +6,13 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ScienceIcon from '@mui/icons-material/Science';
+import AssignmentLateIcon from '@mui/icons-material/AssignmentLate';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import ShieldIcon from '@mui/icons-material/Shield';
+import BloodtypeIcon from '@mui/icons-material/Bloodtype';
+import DiamondIcon from '@mui/icons-material/Diamond';
+import BugReportIcon from '@mui/icons-material/BugReport';
 
 const data = [
   { name: '23 Nov', value: 24000 },
@@ -70,30 +77,81 @@ const StatsDashboard = () => {
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={4}>
           <StatCard 
-            title="Total Revenue" 
-            value="$45,678.90" 
-            subtitle="+20% month over month" 
-            icon={<TrendingUpIcon />}
-            gradient="linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)"
+            title="Samples Analyzed" 
+            value="145" 
+            subtitle="+12% vs yesterday" 
+            icon={<ScienceIcon />}
+            gradient="linear-gradient(135deg, #00C853 0%, #009624 100%)"
           />
         </Grid>
         <Grid item xs={12} sm={6} md={4}>
           <StatCard 
-            title="Total Patients" 
-            value="2,405" 
-            subtitle="+33% month over month" 
-            icon={<PeopleAltIcon />}
-            gradient="linear-gradient(135deg, #134E5E 0%, #71B280 100%)" 
+            title="Pending Reviews" 
+            value="24" 
+            subtitle="Needs urgent attention" 
+            icon={<AssignmentLateIcon />}
+            gradient="linear-gradient(135deg, #FF9100 0%, #FF6D00 100%)" 
           />
         </Grid>
         <Grid item xs={12} sm={6} md={4}>
           <StatCard 
-            title="Pending Reports" 
-            value="101" 
-            subtitle="-8% month over month" 
-            icon={<AssignmentIcon />}
-            gradient="linear-gradient(135deg, #20002c 0%, #cbb4d4 100%)" 
+            title="Critical Findings" 
+            value="8" 
+            subtitle="High risk detected" 
+            icon={<WarningAmberIcon />}
+            gradient="linear-gradient(135deg, #FF1744 0%, #D50000 100%)" 
           />
+        </Grid>
+      </Grid>
+
+      {/* New Sediment Summary Section */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12}>
+            <Card elevation={4} sx={{ borderRadius: 4, bgcolor: 'background.paper' }}>
+                <CardContent sx={{ p: 4 }}>
+                    <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                         Common Sediments Detected Today
+                    </Typography>
+                    <Grid container spacing={3} sx={{ mt: 1 }}>
+                        {[
+                            { label: 'WBC (Average)', value: '4-6', unit: '/hpf', color: '#00bcd4', icon: <ShieldIcon /> },
+                            { label: 'RBC (Average)', value: '1-3', unit: '/hpf', color: '#ff1744', icon: <BloodtypeIcon /> },
+                            { label: 'Crystals Detected', value: '15', unit: 'samples', color: '#ff9100', icon: <DiamondIcon /> },
+                            { label: 'Bacteria Detected', value: '8', unit: 'samples', color: '#4caf50', icon: <BugReportIcon /> }
+                        ].map((item, index) => (
+                            <Grid item xs={12} sm={6} md={3} key={index}>
+                                <Paper 
+                                    elevation={0}
+                                    sx={{ 
+                                        p: 3, 
+                                        textAlign: 'center', 
+                                        bgcolor: `${item.color}08`, 
+                                        border: `1px solid ${item.color}20`,
+                                        borderRadius: 3,
+                                        transition: 'all 0.3s ease',
+                                        '&:hover': {
+                                            transform: 'translateY(-5px)',
+                                            boxShadow: `0 8px 24px ${item.color}20`,
+                                            bgcolor: `${item.color}15`,
+                                            borderColor: `${item.color}40`
+                                        }
+                                    }}
+                                >
+                                    <Box sx={{ color: item.color, mb: 2, opacity: 0.9 }}>
+                                        {React.cloneElement(item.icon, { sx: { fontSize: 40 } })}
+                                    </Box>
+                                    <Typography variant="h4" fontWeight="900" sx={{ color: 'text.primary', mb: 1 }}>
+                                        {item.value}
+                                    </Typography>
+                                    <Typography variant="body1" color="text.secondary" fontWeight="600">
+                                        {item.label} {item.unit && <span style={{ opacity: 0.7, fontWeight: 400 }}>{item.unit}</span>}
+                                    </Typography>
+                                </Paper>
+                            </Grid>
+                        ))}
+                    </Grid>
+                </CardContent>
+            </Card>
         </Grid>
       </Grid>
 

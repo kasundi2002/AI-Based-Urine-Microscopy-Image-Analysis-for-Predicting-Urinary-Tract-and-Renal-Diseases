@@ -158,12 +158,13 @@ const AnalysisView = ({ image, analysis, patient }) => {
               height: 450, // Fixed height to match image container
               overflow: 'hidden', 
               borderRadius: 3,
-              bgcolor: '#0f172a', // Darker background for contrast
-              border: '1px solid rgba(255,255,255,0.1)',
+              bgcolor: 'background.paper', // Light background
+              border: '1px solid rgba(0,0,0,0.1)',
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              boxShadow: 3
           }}>
-            <Box sx={{ p: 3, borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'linear-gradient(90deg, rgba(0, 188, 212, 0.1) 0%, transparent 100%)' }}>
+            <Box sx={{ p: 3, borderBottom: '1px solid rgba(0,0,0,0.1)', background: 'linear-gradient(90deg, rgba(0, 188, 212, 0.1) 0%, transparent 100%)' }}>
                 <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 'bold' }}>Automated Findings</Typography>
                 <Typography variant="caption" color="text.secondary">AI Confidence: 98.5%</Typography>
             </Box>
@@ -175,13 +176,13 @@ const AnalysisView = ({ image, analysis, patient }) => {
                     <TableBody>
                     {rows.map((row, index) => (
                         <TableRow key={index} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                        <TableCell sx={{ pl: 0, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <TableCell sx={{ pl: 0, borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                 <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: row.color, mr: 2, boxShadow: `0 0 8px ${row.color}` }} />
                                 <Typography variant="body1" fontWeight="500">{row.particle}</Typography>
                             </Box>
                         </TableCell>
-                        <TableCell align="right" sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <TableCell align="right" sx={{ borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
                             <Typography variant="body2" sx={{ whiteSpace: 'pre-line', color: 'text.secondary' }}>
                                 {row.count}
                             </Typography>

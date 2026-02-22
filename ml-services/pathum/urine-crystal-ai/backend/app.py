@@ -3,6 +3,7 @@ import sys
 import json
 import traceback
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from flasgger import Swagger
 from werkzeug.utils import secure_filename
 import cv2
@@ -21,6 +22,7 @@ except ImportError as e:
     sys.exit(1)
 
 app = Flask(__name__)
+CORS(app)
 
 # Swagger Configuration
 app.config['SWAGGER'] = {

@@ -25,6 +25,12 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
   const [isCameraActive, setIsCameraActive] = useState(false);
 
   useEffect(() => {
+    if (isCameraActive && videoRef.current && stream) {
+       videoRef.current.srcObject = stream;
+    }
+  }, [isCameraActive, stream, inputMethod]);
+
+  useEffect(() => {
     const fetchPatients = async () => {
       const data = await api.getPatients();
       setPatients(data);
