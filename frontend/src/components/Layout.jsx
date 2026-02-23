@@ -27,7 +27,8 @@ const openedMixin = (theme) => ({
   }),
   overflowX: 'hidden',
   borderRadius: 0,
-  borderRight: '1px solid rgba(0,0,0,0.12)',
+  borderRight: 'none',
+  background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)',
 });
 
 const closedMixin = (theme) => ({
@@ -41,7 +42,8 @@ const closedMixin = (theme) => ({
     width: `calc(${theme.spacing(8)} + 1px)`,
   },
   borderRadius: 0,
-  borderRight: '1px solid rgba(0,0,0,0.12)',
+  borderRight: 'none',
+  background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)',
 });
 
 const DrawerHeader = styled('div')(({ theme }) => ({
@@ -159,19 +161,19 @@ const Layout = () => {
         <DrawerHeader>
             <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', px: 2, justifyContent: open ? 'space-between' : 'center' }}>
                 {open && (
-                    <Typography variant="h4" noWrap component="div" sx={{ color: 'primary.main', fontWeight: 700, letterSpacing: 0 }}>
+                    <Typography variant="h4" noWrap component="div" sx={{ color: '#38bdf8', fontWeight: 700, letterSpacing: 0 }}>
                     Uro.Al
                     </Typography>
                 )}
                  {!isMobile && (
-                     <IconButton onClick={handleDrawerToggle}>
+                     <IconButton onClick={handleDrawerToggle} sx={{ color: 'rgba(255,255,255,0.5)', '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.08)' } }}>
                         {theme.direction === 'rtl' ? <ChevronRightIcon /> : <ChevronLeftIcon />}
                     </IconButton>
                  )}
             </Box>
         </DrawerHeader>
-        <Divider />
-        <List>
+        <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
+        <List sx={{ px: 1.5, mt: 1 }}>
           {menuItems.map((item) => {
             const isSelected = location.pathname + location.search === item.path;
             
@@ -186,23 +188,22 @@ const Layout = () => {
               sx={{
                 minHeight: 48,
                 justifyContent: open ? 'initial' : 'center',
-                px: 2.5,
-                mb: 1,
-                borderRadius: 0,
+                px: 2,
+                mb: 0.5,
+                borderRadius: 2,
                 '&.Mui-selected': {
-                    backgroundColor: alpha(theme.palette.primary.main, 0.08),
-                    borderRight: open ? `4px solid ${theme.palette.primary.main}` : 'none',
-                    '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.12) }
+                    backgroundColor: alpha('#38bdf8', 0.15),
+                    '&:hover': { backgroundColor: alpha('#38bdf8', 0.2) }
                 },
-                '&:hover': { backgroundColor: alpha(theme.palette.text.primary, 0.04) },
+                '&:hover': { backgroundColor: 'rgba(255,255,255,0.06)' },
               }}
             >
               <ListItemIcon
                 sx={{
                   minWidth: 0,
-                  mr: open ? 3 : 'auto',
+                  mr: open ? 2.5 : 'auto',
                   justifyContent: 'center',
-                  color: isSelected ? 'primary.main' : 'text.secondary'
+                  color: isSelected ? '#38bdf8' : 'rgba(255,255,255,0.5)'
                 }}
               >
                 {item.icon}
@@ -210,9 +211,9 @@ const Layout = () => {
               <ListItemText 
                 primary={item.text} 
                 primaryTypographyProps={{ 
-                    fontWeight: isSelected ? 'bold' : 'medium',
-                    fontSize: '1rem',
-                    color: isSelected ? 'primary.main' : 'text.primary'
+                    fontWeight: isSelected ? 700 : 500,
+                    fontSize: '0.9rem',
+                    color: isSelected ? '#fff' : 'rgba(255,255,255,0.7)'
                 }}
                 sx={{ opacity: open ? 1 : 0 }} 
               />
@@ -283,7 +284,7 @@ const Layout = () => {
         ModalProps={{ keepMounted: true }}
         sx={{
           display: { xs: 'block', md: 'none' },
-          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)', borderRight: 'none' },
         }}
       >
         {drawerContent}
