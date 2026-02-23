@@ -103,7 +103,7 @@ const AnalysisView = ({ image, analysis, patient }) => {
       </Paper>
 
       <Grid container spacing={2} sx={{ width: '100%', mt: 0 }}>
-        <Grid item xs={12} sm={6} md={6}>
+        <Grid size={{ xs: 12, sm: 6, md: 6 }}>
           <ImageContainer sx={{ boxShadow: 4, height: 450 }}>
             <img 
               src={image} 
@@ -152,7 +152,7 @@ const AnalysisView = ({ image, analysis, patient }) => {
           </Box>
         </Grid>
 
-        <Grid item xs={12} sm={6} md={6}>
+        <Grid size={{ xs: 12, sm: 6, md: 6 }}>
           <Paper sx={{ 
               p: 0, 
               height: 450, // Fixed height to match image container

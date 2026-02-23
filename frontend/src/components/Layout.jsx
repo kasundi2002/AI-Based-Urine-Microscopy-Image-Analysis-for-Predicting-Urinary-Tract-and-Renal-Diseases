@@ -298,7 +298,7 @@ const Layout = () => {
         {drawerContent}
       </Drawer>
 
-      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+      <Box component="main" sx={{ flexGrow: 1, p: 3, minWidth: 0 }}>
         <DrawerHeader />
         <Outlet />
       </Box>

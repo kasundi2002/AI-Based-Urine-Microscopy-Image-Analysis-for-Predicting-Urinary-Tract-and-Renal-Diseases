@@ -166,7 +166,7 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
        
        <Grid container spacing={4}>
            {/* Left Panel: Patient Selection */}
-           <Grid item xs={12} md={4}>
+           <Grid size={{ xs: 12, md: 4 }}>
                <Paper sx={{ 
                    p: 4, 
                    height: '100%', 
@@ -209,7 +209,7 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
            </Grid>
 
            {/* Right Panel: Image Input */}
-           <Grid item xs={12} md={8}>
+           <Grid size={{ xs: 12, md: 8 }}>
                <Paper sx={{ 
                    p: 4, 
                    height: '100%',

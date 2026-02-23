@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Grid, Paper, Typography, Button, List, ListItem, ListItemText, ListItemAvatar, Avatar, Chip, Card, CardContent, IconButton } from '@mui/material';
+import { Box, Grid, Paper, Typography, Button, List, ListItem, ListItemAvatar, Avatar, Chip, Card, CardContent, Divider, useTheme, alpha } from '@mui/material';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import PeopleIcon from '@mui/icons-material/People';
 import WarningIcon from '@mui/icons-material/Warning';
@@ -8,40 +8,88 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import SystemUpdateIcon from '@mui/icons-material/SystemUpdate';
 import BuildIcon from '@mui/icons-material/Build';
+import AccessTimeFilledIcon from '@mui/icons-material/AccessTimeFilled';
+import PendingActionsIcon from '@mui/icons-material/PendingActions';
 
-const StatCard = ({ title, value, color, icon, gradient }) => (
-  <Card 
-    elevation={4}
-    sx={{ 
-        height: '100%', 
-        background: gradient || `linear-gradient(135deg, ${color} 0%, ${color}DD 100%)`, 
-        color: 'white',
-        borderRadius: 4,
-        position: 'relative',
-        overflow: 'hidden',
-        transition: 'transform 0.3s, box-shadow 0.3s',
-        '&:hover': { 
-            transform: 'translateY(-5px)',
-            boxShadow: `0 8px 24px -4px ${color}80`
-        }
-    }}
-  >
-    <Box sx={{ position: 'absolute', top: -10, right: -10, opacity: 0.15 }}>
-        {React.cloneElement(icon, { sx: { fontSize: 100 } })}
-    </Box>
-    <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Box sx={{ p: 1, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.2)', mr: 2, display: 'flex' }}>
-                {icon}
+// A premium-looking stat card utilizing white space, soft shadows, and subtle color accents
+const StatCard = ({ title, value, color, icon, trendLabel }) => {
+    const theme = useTheme();
+    return (
+        <Card 
+            elevation={0}
+            sx={{ 
+                height: '100%', 
+                backgroundColor: theme.palette.background.paper, 
+                borderRadius: 4,
+                border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+                position: 'relative',
+                overflow: 'hidden',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: `0 4px 20px 0 ${alpha(theme.palette.common.black, 0.03)}`,
+                '&:hover': { 
+                    transform: 'translateY(-4px)',
+                    boxShadow: `0 12px 28px 0 ${alpha(color, 0.12)}`,
+                    borderColor: alpha(color, 0.3)
+                }
+            }}
+        >
+            <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', zIndex: 1, position: 'relative' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                    <Box 
+                        sx={{ 
+                            p: 1.2, 
+                            borderRadius: 3, 
+                            bgcolor: alpha(color, 0.08), 
+                            color: color,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        {React.cloneElement(icon, { sx: { fontSize: 26 } })}
+                    </Box>
+                    {trendLabel && (
+                         <Chip 
+                         label={trendLabel} 
+                         size="small" 
+                         sx={{ 
+                             bgcolor: alpha(color, 0.08), 
+                             color: color,
+                             fontWeight: 600,
+                             fontSize: '0.7rem',
+                             height: 22
+                         }} 
+                     />
+                    )}
+                </Box>
+                <Box sx={{ mt: 'auto' }}>
+                    <Typography variant="h3" sx={{ fontWeight: 800, color: theme.palette.text.primary, letterSpacing: '-1px', mb: 0.5 }}>
+                        {value}
+                    </Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.secondary, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                        {title}
+                    </Typography>
+                </Box>
+            </CardContent>
+            {/* Subtle background decoration */}
+            <Box 
+                sx={{ 
+                    position: 'absolute', 
+                    top: -20, 
+                    right: -20, 
+                    opacity: 0.04, 
+                    color: color,
+                    transform: 'rotate(15deg)'
+                }}
+            >
+                {React.cloneElement(icon, { sx: { fontSize: 130 } })}
             </Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, opacity: 0.9 }}>{title}</Typography>
-        </Box>
-        <Typography variant="h3" fontWeight="900">{value}</Typography>
-    </CardContent>
-  </Card>
-);
+        </Card>
+    );
+};
 
 const ClinicianOverview = ({ onNavigate }) => {
+  const theme = useTheme();
   // Mock data
   const stats = {
     pendingReviews: 12,
@@ -51,124 +99,158 @@ const ClinicianOverview = ({ onNavigate }) => {
   };
 
   const pendingList = [
-      { id: '1', name: 'Kane Peter', risk: 'High', date: 'Oct 20' },
-      { id: '2', name: 'Alice Smith', risk: 'High', date: 'Oct 21' },
-      { id: '3', name: 'Bob Johnson', risk: 'Moderate', date: 'Oct 21' },
-      { id: '4', name: 'John Doe', risk: 'High', date: 'Oct 22' },
+      { id: '1', name: 'Kane Peter', risk: 'High', date: 'Oct 20', time: '10:45 AM' },
+      { id: '2', name: 'Alice Smith', risk: 'High', date: 'Oct 21', time: '09:15 AM' },
+      { id: '3', name: 'Bob Johnson', risk: 'Moderate', date: 'Oct 21', time: '02:30 PM' },
+      { id: '4', name: 'John Doe', risk: 'High', date: 'Oct 22', time: '11:00 AM' },
   ];
 
   return (
-    <Box>
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+    <Box sx={{ width: '100%' }}>
+      <Box sx={{ mb: 5, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 2 }}>
           <Box>
-            <Typography variant="h4" sx={{ fontWeight: '900', letterSpacing: -0.5, mb: 1 }}>
+            <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: '-0.5px', mb: 1, color: theme.palette.text.primary }}>
                 Dashboard Overview
             </Typography>
-            <Typography variant="body1" color="text.secondary">
-                Welcome back, Dr. Smith. Here's your shift summary.
+            <Typography variant="body1" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
+                Welcome back, Dr. Smith. Here's your shift summary for today.
             </Typography>
           </Box>
-          <Button variant="contained" startIcon={<AssignmentIcon />}>
+          <Button 
+            variant="contained" 
+            startIcon={<PendingActionsIcon />}
+            sx={{ 
+                borderRadius: 2, 
+                px: 3, 
+                py: 1, 
+                textTransform: 'none', 
+                fontWeight: 600,
+                boxShadow: `0 8px 16px 0 ${alpha(theme.palette.primary.main, 0.24)}`
+            }}
+          >
               View All Tasks
           </Button>
       </Box>
       
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
+      <Grid container spacing={3} sx={{ mb: 5 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard 
             title="Pending Reviews" 
             value={stats.pendingReviews} 
-            color="#ff9800" 
-            gradient="linear-gradient(135deg, #FF9800 0%, #F57C00 100%)"
+            color="#FF9800" 
             icon={<AssignmentIcon />} 
+            trendLabel="+2 Needs Action"
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard 
             title="Critical Cases" 
             value={stats.criticalCases} 
-            color="#f44336" 
-            gradient="linear-gradient(135deg, #FF5252 0%, #D32F2F 100%)"
+            color="#F44336" 
             icon={<WarningIcon />} 
+            trendLabel="Urgent"
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard 
             title="Total Patients" 
             value={stats.totalPatients} 
-            color="#2196f3" 
-            gradient="linear-gradient(135deg, #2196F3 0%, #1976D2 100%)"
+            color="#2196F3" 
             icon={<PeopleIcon />} 
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard 
             title="Signed Off Today" 
             value={stats.completedToday} 
-            color="#4caf50" 
-            gradient="linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)"
+            color="#4CAF50" 
             icon={<CheckCircleIcon />} 
           />
         </Grid>
       </Grid>
 
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-            <Card elevation={4} sx={{ height: '100%', borderRadius: 4, bgcolor: 'background.paper' }}>
+      <Grid container spacing={4}>
+        <Grid size={{ xs: 12, md: 8 }}>
+            <Card 
+                elevation={0} 
+                sx={{ 
+                    height: '100%', 
+                    borderRadius: 4, 
+                    backgroundColor: theme.palette.background.paper,
+                    border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+                    boxShadow: `0 4px 24px 0 ${alpha(theme.palette.common.black, 0.02)}`
+                }}
+            >
                 <CardContent sx={{ p: 0 }}>
-                    <Box sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <Box sx={{ p: 4, pb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Box sx={{ p: 1, bgcolor: 'error.main', borderRadius: 1, mr: 2, color: 'white' }}>
+                            <Box sx={{ p: 1.2, bgcolor: alpha('#F44336', 0.1), borderRadius: 2, mr: 2, color: '#F44336' }}>
                                 <WarningIcon fontSize="small" />
                             </Box>
-                            <Typography variant="h6" fontWeight="bold">Urgent Reviews</Typography>
+                            <Box>
+                                <Typography variant="h6" sx={{ fontWeight: 700, color: theme.palette.text.primary }}>Urgent Reviews Needed</Typography>
+                                <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>High priority patients waiting for sign-off</Typography>
+                            </Box>
                         </Box>
                         <Button 
                             endIcon={<ArrowForwardIcon />} 
                             onClick={() => onNavigate('review')}
-                            sx={{ fontWeight: 'bold' }}
+                            sx={{ fontWeight: 600, textTransform: 'none', borderRadius: 2 }}
+                            color="inherit"
                         >
                             View All
                         </Button>
                     </Box>
+                    <Divider sx={{ borderColor: alpha(theme.palette.divider, 0.06) }} />
                     <List sx={{ p: 0 }}>
                         {pendingList.map((item, index) => (
                             <ListItem 
                                 key={item.id} 
                                 divider={index !== pendingList.length - 1}
                                 sx={{ 
-                                    py: 2.5, 
-                                    px: 3,
-                                    transition: 'background-color 0.2s',
-                                    '&:hover': { bgcolor: 'action.hover' },
+                                    py: 3, 
+                                    px: 4,
+                                    transition: 'all 0.2s ease',
+                                    borderBottom: index !== pendingList.length - 1 ? `1px solid ${alpha(theme.palette.divider, 0.06)}` : 'none',
+                                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.02) },
                                     display: 'flex',
-                                    justifyContent: 'space-between'
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
                                 }}
                             >
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                     <Avatar 
                                         sx={{ 
-                                            bgcolor: item.risk === 'High' ? 'error.main' : 'warning.main', 
-                                            width: 48, 
-                                            height: 48, 
+                                            bgcolor: item.risk === 'High' ? alpha('#F44336', 0.1) : alpha('#FF9800', 0.1), 
+                                            color: item.risk === 'High' ? '#F44336' : '#FF9800',
+                                            width: 52, 
+                                            height: 52, 
                                             fontSize: '1.2rem',
-                                            boxShadow: 2,
-                                            mr: 2
+                                            fontWeight: 700,
+                                            mr: 3,
+                                            border: `2px solid ${item.risk === 'High' ? alpha('#F44336', 0.2) : alpha('#FF9800', 0.2)}`
                                         }}
                                     >
                                         {item.name.charAt(0)}
                                     </Avatar>
                                     <Box>
-                                        <Typography variant="subtitle1" fontWeight="bold">{item.name}</Typography>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5, gap: 1 }}>
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5 }}>{item.name}</Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                             <Chip 
                                                 label={item.risk} 
                                                 size="small" 
-                                                color={item.risk === 'High' ? 'error' : 'warning'} 
-                                                sx={{ height: 20, fontSize: '0.7rem', fontWeight: 'bold' }}
+                                                sx={{ 
+                                                    height: 22, 
+                                                    fontSize: '0.7rem', 
+                                                    fontWeight: 700,
+                                                    bgcolor: item.risk === 'High' ? alpha('#F44336', 0.1) : alpha('#FF9800', 0.1),
+                                                    color: item.risk === 'High' ? '#F44336' : '#FF9800',
+                                                    borderRadius: 1.5
+                                                }}
                                             />
-                                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                                                • {item.date}
+                                            <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 0.5, fontWeight: 500 }}>
+                                                <AccessTimeFilledIcon sx={{ fontSize: 14, opacity: 0.7 }} />
+                                                {item.date}, {item.time}
                                             </Typography>
                                         </Box>
                                     </Box>
@@ -176,9 +258,15 @@ const ClinicianOverview = ({ onNavigate }) => {
                                 <Button 
                                     variant="outlined" 
                                     color="primary"
-                                    size="small" 
                                     onClick={() => onNavigate('review')}
-                                    sx={{ borderRadius: 2 }}
+                                    sx={{ 
+                                        borderRadius: 2, 
+                                        textTransform: 'none', 
+                                        fontWeight: 600,
+                                        px: 3,
+                                        borderWidth: 1.5,
+                                        '&:hover': { borderWidth: 1.5 }
+                                    }}
                                 >
                                     Review Case
                                 </Button>
@@ -188,45 +276,54 @@ const ClinicianOverview = ({ onNavigate }) => {
                 </CardContent>
             </Card>
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
             <Card 
-                elevation={4} 
+                elevation={0} 
                 sx={{ 
                     height: '100%', 
                     borderRadius: 4,
-                    background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.05) 0%, rgba(33, 150, 243, 0.01) 100%)',
-                    border: '1px solid rgba(33, 150, 243, 0.1)',
+                    backgroundColor: theme.palette.background.paper,
+                    border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+                    boxShadow: `0 4px 24px 0 ${alpha(theme.palette.common.black, 0.02)}`
                 }}
             >
-                <CardContent sx={{ p: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                        <NotificationsIcon color="primary" sx={{ mr: 1.5 }} />
-                        <Typography variant="h6" fontWeight="bold">System Updates</Typography>
+                <CardContent sx={{ p: 4 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
+                        <Box sx={{ p: 1.2, bgcolor: alpha(theme.palette.primary.main, 0.1), borderRadius: 2, mr: 2, color: theme.palette.primary.main }}>
+                           <NotificationsIcon fontSize="small" />
+                        </Box>
+                        <Box>
+                             <Typography variant="h6" sx={{ fontWeight: 700, color: theme.palette.text.primary }}>System Updates</Typography>
+                             <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>Recent platform activities</Typography>
+                        </Box>
                     </Box>
                     
-                    <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-                        <Avatar sx={{ bgcolor: 'rgba(33, 150, 243, 0.1)', color: 'primary.main', width: 40, height: 40 }}>
-                            <SystemUpdateIcon fontSize="small" />
+                    <Box sx={{ display: 'flex', gap: 2.5, mb: 4, position: 'relative' }}>
+                        {/* Timeline Connector */}
+                        <Box sx={{ position: 'absolute', left: 24, top: 48, bottom: -24, width: 2, bgcolor: alpha(theme.palette.divider, 0.1) }} />
+                        
+                        <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main, width: 48, height: 48, zIndex: 1 }}>
+                            <SystemUpdateIcon />
                         </Avatar>
-                        <Box>
-                            <Typography variant="subtitle2" fontWeight="bold" gutterBottom>Version 2.1 Deployed</Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                        <Box sx={{ pt: 0.5 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5 }}>Version 2.1 Deployed</Typography>
+                            <Typography variant="body2" sx={{ color: theme.palette.text.secondary, lineHeight: 1.6, fontWeight: 500 }}>
                                 New AI model deployed for improved crystal detection accuracy (98.5%).
                             </Typography>
-                            <Typography variant="caption" color="text.disabled" sx={{ mt: 1, display: 'block' }}>2 hours ago</Typography>
+                            <Typography variant="caption" sx={{ color: theme.palette.text.disabled, mt: 1, display: 'block', fontWeight: 600 }}>2 hours ago</Typography>
                         </Box>
                     </Box>
 
-                    <Box sx={{ display: 'flex', gap: 2 }}>
-                        <Avatar sx={{ bgcolor: 'rgba(255, 150, 0, 0.1)', color: 'warning.main', width: 40, height: 40 }}>
-                            <BuildIcon fontSize="small" />
+                    <Box sx={{ display: 'flex', gap: 2.5 }}>
+                        <Avatar sx={{ bgcolor: alpha('#FF9800', 0.1), color: '#FF9800', width: 48, height: 48, zIndex: 1 }}>
+                            <BuildIcon />
                         </Avatar>
-                        <Box>
-                            <Typography variant="subtitle2" fontWeight="bold" gutterBottom>Scheduled Maintenance</Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                        <Box sx={{ pt: 0.5 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5 }}>Scheduled Maintenance</Typography>
+                            <Typography variant="body2" sx={{ color: theme.palette.text.secondary, lineHeight: 1.6, fontWeight: 500 }}>
                                 System will be offline for routine maintenance on Sunday 2 AM - 4 AM.
                             </Typography>
-                            <Typography variant="caption" color="text.disabled" sx={{ mt: 1, display: 'block' }}>Yesterday</Typography>
+                            <Typography variant="caption" sx={{ color: theme.palette.text.disabled, mt: 1, display: 'block', fontWeight: 600 }}>Yesterday</Typography>
                         </Box>
                     </Box>
                 </CardContent>

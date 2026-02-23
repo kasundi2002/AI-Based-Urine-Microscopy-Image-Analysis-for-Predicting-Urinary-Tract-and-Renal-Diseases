@@ -66,7 +66,7 @@ const DiagnosticView = ({ report }) => {
   return (
     <Box sx={{ mb: 3 }}>
       <Grid container spacing={3}>
-        <Grid item xs={12} md={7}>
+        <Grid size={{ xs: 12, md: 7 }}>
           <Paper sx={{ p: 2, height: '100%' }}>
             <Typography variant="h6" gutterBottom>Microscopy Analysis</Typography>
             <ImageContainer sx={{ height: 'calc(100% - 40px)' }}> {/* Adjust height to fill */}
@@ -106,7 +106,7 @@ const DiagnosticView = ({ report }) => {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={5}>
+        <Grid size={{ xs: 12, md: 5 }}>
           <Paper sx={{ p: 3, mb: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <Avatar sx={{ width: 56, height: 56, mr: 2, bgcolor: 'primary.main' }}>

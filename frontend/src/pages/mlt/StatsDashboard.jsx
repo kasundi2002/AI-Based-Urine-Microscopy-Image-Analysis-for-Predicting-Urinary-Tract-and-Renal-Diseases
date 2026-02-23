@@ -75,7 +75,7 @@ const StatsDashboard = () => {
       <Typography variant="h4" sx={{ mb: 4, fontWeight: '900', letterSpacing: -0.5, color: 'text.primary' }}>Overview</Typography>
       
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <StatCard 
             title="Samples Analyzed" 
             value="145" 
@@ -84,7 +84,7 @@ const StatsDashboard = () => {
             gradient="linear-gradient(135deg, #00C853 0%, #009624 100%)"
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <StatCard 
             title="Pending Reviews" 
             value="24" 
@@ -93,7 +93,7 @@ const StatsDashboard = () => {
             gradient="linear-gradient(135deg, #FF9100 0%, #FF6D00 100%)" 
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
           <StatCard 
             title="Critical Findings" 
             value="8" 
@@ -106,7 +106,7 @@ const StatsDashboard = () => {
 
       {/* New Sediment Summary Section */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
             <Card elevation={4} sx={{ borderRadius: 4, bgcolor: 'background.paper' }}>
                 <CardContent sx={{ p: 4 }}>
                     <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
@@ -119,7 +119,7 @@ const StatsDashboard = () => {
                             { label: 'Crystals Detected', value: '15', unit: 'samples', color: '#ff9100', icon: <DiamondIcon /> },
                             { label: 'Bacteria Detected', value: '8', unit: 'samples', color: '#4caf50', icon: <BugReportIcon /> }
                         ].map((item, index) => (
-                            <Grid item xs={12} sm={6} md={3} key={index}>
+                            <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
                                 <Paper 
                                     elevation={0}
                                     sx={{ 

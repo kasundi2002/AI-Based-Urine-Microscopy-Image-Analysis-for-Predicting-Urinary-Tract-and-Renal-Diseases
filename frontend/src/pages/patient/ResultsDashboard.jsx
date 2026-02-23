@@ -54,7 +54,7 @@ const ResultsDashboard = ({ report }) => {
 
       <Grid container spacing={3}>
         {/* Risk Score Card */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <Card 
             elevation={4}
             sx={{ 
@@ -93,7 +93,7 @@ const ResultsDashboard = ({ report }) => {
         </Grid>
 
         {/* Urine Sediments Count Card */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
             <Card elevation={4} sx={{ height: '100%', borderRadius: 4, bgcolor: 'background.paper' }}>
                 <CardContent sx={{ p: 3 }}>
                     <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
@@ -106,7 +106,7 @@ const ResultsDashboard = ({ report }) => {
                             { label: 'Crystals', value: report.crystals || 'None', unit: '', color: '#ff9100', icon: <DiamondIcon /> },
                             { label: 'Bacteria', value: report.bacteria || 'None', unit: '', color: '#4caf50', icon: <BugReportIcon /> }
                         ].map((item, index) => (
-                            <Grid item xs={6} key={index}>
+                            <Grid size={{ xs: 6 }} key={index}>
                                 <Paper 
                                     elevation={0}
                                     sx={{ 
@@ -142,7 +142,7 @@ const ResultsDashboard = ({ report }) => {
         </Grid>
 
         {/* Health Trend Card - NEW */}
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
             <Card elevation={4} sx={{ height: '100%', borderRadius: 4, bgcolor: 'background.paper', position: 'relative', overflow: 'visible' }}>
                 <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -185,7 +185,7 @@ const ResultsDashboard = ({ report }) => {
         </Grid>
 
         {/* Recommendations Card */}
-        <Grid item xs={12} md={12}>
+        <Grid size={{ xs: 12, md: 12 }}>
           <Paper sx={{ 
               p: 4, 
               height: '100%', 
@@ -201,7 +201,7 @@ const ResultsDashboard = ({ report }) => {
             </Box>
             
             <Grid container spacing={4}>
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Box sx={{ p: 2, bgcolor: 'rgba(33, 150, 243, 0.08)', borderRadius: 2, height: '100%' }}>
                          <Typography variant="subtitle2" color="primary" gutterBottom fontWeight="bold">PRESCRIPTION & NOTES</Typography>
                          <Typography variant="body1" sx={{ fontSize: '1.1rem', mt: 1 }}>
@@ -213,22 +213,22 @@ const ResultsDashboard = ({ report }) => {
                     </Box>
                 </Grid>
                 
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom fontWeight="bold" sx={{ px: 1 }}>LIFESTYLE ADJUSTMENTS</Typography>
                     <Grid container spacing={2} sx={{ mt: 0 }}>
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <Paper variant="outlined" sx={{ p: 2, display: 'flex', alignItems: 'center', bgcolor: 'transparent' }}>
                                 <WaterDropIcon sx={{ color: '#29b6f6', mr: 2 }} />
                                 <Typography>Increase daily water intake to 2.5L</Typography>
                             </Paper>
                         </Grid>
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                              <Paper variant="outlined" sx={{ p: 2, display: 'flex', alignItems: 'center', bgcolor: 'transparent' }}>
                                 <Typography sx={{ width: 24, textAlign: 'center', color: 'warning.main', fontWeight: 'bold', mr: 2 }}>•</Typography>
                                 <Typography>Reduce sodium intake (salt)</Typography>
                             </Paper>
                         </Grid>
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                              <Paper variant="outlined" sx={{ p: 2, display: 'flex', alignItems: 'center', bgcolor: 'transparent' }}>
                                 <Typography sx={{ width: 24, textAlign: 'center', color: 'warning.main', fontWeight: 'bold', mr: 2 }}>•</Typography>
                                 <Typography>Limit oxalate-rich foods</Typography>
