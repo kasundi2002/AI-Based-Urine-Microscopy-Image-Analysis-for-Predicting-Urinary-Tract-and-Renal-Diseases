@@ -10,6 +10,7 @@ import ShieldIcon from '@mui/icons-material/Shield';
 import BloodtypeIcon from '@mui/icons-material/Bloodtype';
 import DiamondIcon from '@mui/icons-material/Diamond';
 import BugReportIcon from '@mui/icons-material/BugReport';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { 
   XAxis, Tooltip, ResponsiveContainer, AreaChart, Area 
 } from 'recharts';
@@ -21,19 +22,20 @@ const ResultsDashboard = ({ report }) => {
     </Paper>
   );
 
-  const isHighRisk = report.riskScore > 50;
+  const riskScore = report.questionnaireCompleted ? (report.enhancedRiskScore || report.riskScore) : report.riskScore;
+  const isHighRisk = riskScore > 50;
   
-  // Premium Colors
   const riskGradient = isHighRisk 
     ? 'linear-gradient(135deg, #FF1744 0%, #D50000 100%)' 
-    : 'linear-gradient(135deg, #00C853 0%, #009624 100%)';
+    : riskScore > 30 
+      ? 'linear-gradient(135deg, #FF9100 0%, #FF6D00 100%)'
+      : 'linear-gradient(135deg, #00C853 0%, #009624 100%)';
 
-  // Mock Trend Data
   const trendData = [
     { name: 'Aug', score: 45 },
     { name: 'Sep', score: 30 },
     { name: 'Oct', score: 20 },
-    { name: 'Nov', score: 25 },
+    { name: 'Nov', score: riskScore },
   ];
     
   return (
@@ -45,6 +47,15 @@ const ResultsDashboard = ({ report }) => {
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
                Analysis Date: <Chip label={report.date || 'Oct 26, 2023'} size="small" sx={{ ml: 1, borderRadius: 1 }} />
+               {report.questionnaireCompleted && (
+                 <Chip 
+                   icon={<AutoAwesomeIcon sx={{ fontSize: 14 }} />}
+                   label="Enhanced Prediction" 
+                   color="success" 
+                   size="small" 
+                   sx={{ ml: 1, borderRadius: 1 }} 
+                 />
+               )}
             </Typography>
         </Box>
         <Button variant="outlined" color="primary" startIcon={<DownloadIcon />}>
@@ -72,22 +83,37 @@ const ResultsDashboard = ({ report }) => {
                 {isHighRisk ? <WarningIcon sx={{ fontSize: 180 }} /> : <CheckCircleIcon sx={{ fontSize: 180 }} />}
             </Box>
             
-            <CardContent sx={{ textAlign: 'center', py: 6, position: 'relative', zIndex: 1 }}>
+            <CardContent sx={{ textAlign: 'center', py: 5, position: 'relative', zIndex: 1 }}>
               <Box sx={{ display: 'inline-flex', p: 1.5, bgcolor: 'rgba(255,255,255,0.2)', borderRadius: '50%', mb: 2 }}>
                   {isHighRisk ? <WarningIcon fontSize="large" /> : <CheckCircleIcon fontSize="large" />}
               </Box>
               
               <Typography variant="h2" fontWeight="900" sx={{ textShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>
-                {report.riskScore}%
+                {riskScore}%
               </Typography>
               
               <Typography variant="h6" fontWeight="bold" sx={{ mt: 1, opacity: 0.9 }}>
-                {report.riskLabel || (isHighRisk ? 'High Risk Detected' : 'Low Risk')}
+                {report.questionnaireCompleted 
+                  ? (report.enhancedRiskLabel || report.riskLabel || (isHighRisk ? 'High Risk Detected' : 'Low Risk'))
+                  : (report.riskLabel || (isHighRisk ? 'High Risk Detected' : 'Low Risk'))
+                }
               </Typography>
 
-              <Typography variant="body2" sx={{ mt: 3, opacity: 0.8, maxWidth: '80%', mx: 'auto' }}>
-                Based on AI analysis of your urine microscopy sample.
+              <Typography variant="body2" sx={{ mt: 2, opacity: 0.8, maxWidth: '80%', mx: 'auto' }}>
+                {report.questionnaireCompleted 
+                  ? 'Enhanced prediction combining lab analysis + health questionnaire data.'
+                  : 'Based on AI analysis of your urine microscopy sample.'
+                }
               </Typography>
+
+              {report.questionnaireCompleted && (
+                <Chip 
+                  icon={<AutoAwesomeIcon sx={{ fontSize: 14, color: 'white !important' }} />}
+                  label="AI + Questionnaire" 
+                  size="small" 
+                  sx={{ mt: 2, bgcolor: 'rgba(255,255,255,0.25)', color: 'white', fontWeight: 600 }} 
+                />
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -141,7 +167,7 @@ const ResultsDashboard = ({ report }) => {
             </Card>
         </Grid>
 
-        {/* Health Trend Card - NEW */}
+        {/* Health Trend Card */}
         <Grid size={{ xs: 12, md: 4 }}>
             <Card elevation={4} sx={{ height: '100%', borderRadius: 4, bgcolor: 'background.paper', position: 'relative', overflow: 'visible' }}>
                 <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -185,7 +211,7 @@ const ResultsDashboard = ({ report }) => {
         </Grid>
 
         {/* Recommendations Card */}
-        <Grid size={{ xs: 12, md: 12 }}>
+        <Grid size={{ xs: 12 }}>
           <Paper sx={{ 
               p: 4, 
               height: '100%', 
@@ -208,7 +234,7 @@ const ResultsDashboard = ({ report }) => {
                             {report.prescription || 'Drink plenty of water. Follow up in 3 months.'}
                          </Typography>
                          <Typography variant="body2" color="text.secondary" sx={{ mt: 2, fontStyle: 'italic' }}>
-                            - Dr. Smith (Urologist)
+                            {report.doctorNote || '- Dr. Smith (Urologist)'}
                          </Typography>
                     </Box>
                 </Grid>

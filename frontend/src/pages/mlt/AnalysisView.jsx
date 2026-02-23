@@ -1,12 +1,14 @@
-import React from 'react';
-import { Box, Typography, Paper, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, TextField } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Typography, Paper, Grid, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Button, Snackbar, Alert } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import ReplayIcon from '@mui/icons-material/Replay';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { useLabData } from '../../context/LabDataContext';
 
 const ImageContainer = styled(Box)(({ theme }) => ({
   position: 'relative',
   width: '100%',
-  height: 500, // Taller image area
+  height: 500,
   backgroundColor: '#f5f5f5',
   border: '1px solid #e0e0e0',
   borderRadius: theme.shape.borderRadius,
@@ -21,7 +23,7 @@ const BoundingBox = styled(Box)(({ color }) => ({
   border: `2px solid ${color}`,
   backgroundColor: 'transparent',
   '&:hover': {
-    backgroundColor: `${color}1a`, // low opacity on hover
+    backgroundColor: `${color}1a`,
     cursor: 'pointer',
   }
 }));
@@ -40,9 +42,12 @@ const LabelTag = styled(Box)(({ color }) => ({
 }));
 
 const AnalysisView = ({ image, analysis, patient }) => {
+  const { submitLabResult } = useLabData();
+  const [submitted, setSubmitted] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+
   if (!image) return <Typography>No image loaded</Typography>;
 
-  // Mock analysis data if null (for preview)
   const data = analysis || {
     wbc: 5,
     rbc: 2,
@@ -58,12 +63,31 @@ const AnalysisView = ({ image, analysis, patient }) => {
     { particle: 'Bacteria', count: 'Caox - 05', color: '#4caf50' },
   ];
   
-  // Refined boxes based on image
   const boxes = [
-    { id: 1, type: 'WBC', x: 25, y: 35, w: 8, h: 8, color: '#00bcd4' }, // Cyan
-    { id: 2, type: 'RBC', x: 55, y: 55, w: 7, h: 7, color: '#ff1744' }, // Red
-    { id: 3, type: 'Crystal', x: 70, y: 25, w: 12, h: 12, color: '#ff9100' }, // Orange
+    { id: 1, type: 'WBC', x: 25, y: 35, w: 8, h: 8, color: '#00bcd4' },
+    { id: 2, type: 'RBC', x: 55, y: 55, w: 7, h: 7, color: '#ff1744' },
+    { id: 3, type: 'Crystal', x: 70, y: 25, w: 12, h: 12, color: '#ff9100' },
   ];
+
+  const handleSubmitReport = () => {
+    const result = submitLabResult({
+      patientId: patient?.id || 'PAT-2023-001',
+      patientName: patient?.name || 'John Doe',
+      findings: {
+        wbc: data.wbc || 5,
+        rbc: data.rbc || 2,
+        crystals: data.crystals || 'Calcium Oxalate',
+        bacteria: 'None',
+        cast: 'None',
+      },
+      aiRiskScore: data.risk || 45,
+      image: image,
+      mltName: 'Sarah Tech',
+    });
+    
+    setSubmitted(true);
+    setShowSuccess(true);
+  };
 
   return (
     <Box sx={{ animation: 'fadeIn 0.5s ease-in-out' }}>
@@ -81,15 +105,26 @@ const AnalysisView = ({ image, analysis, patient }) => {
         </Typography>
         <Button 
             variant="contained" 
+            disabled={submitted}
+            onClick={handleSubmitReport}
+            startIcon={submitted ? <CheckCircleIcon /> : null}
             sx={{ 
-                background: 'linear-gradient(45deg, #00bcd4 30%, #00e5ff 90%)',
+                background: submitted 
+                  ? 'linear-gradient(45deg, #4CAF50 30%, #66BB6A 90%)' 
+                  : 'linear-gradient(45deg, #00bcd4 30%, #00e5ff 90%)',
                 color: 'white',
-                boxShadow: '0 3px 5px 2px rgba(0, 188, 212, .3)',
+                boxShadow: submitted 
+                  ? '0 3px 5px 2px rgba(76, 175, 80, .3)' 
+                  : '0 3px 5px 2px rgba(0, 188, 212, .3)',
                 fontWeight: 'bold',
-                px: 4
+                px: 4,
+                '&.Mui-disabled': {
+                    background: 'linear-gradient(45deg, #4CAF50 30%, #66BB6A 90%)',
+                    color: 'white',
+                }
             }}
         >
-            Submit Report
+            {submitted ? 'Report Submitted ✓' : 'Submit Report'}
         </Button>
       </Box>
 
@@ -155,10 +190,10 @@ const AnalysisView = ({ image, analysis, patient }) => {
         <Grid size={{ xs: 12, sm: 6, md: 6 }}>
           <Paper sx={{ 
               p: 0, 
-              height: 450, // Fixed height to match image container
+              height: 450,
               overflow: 'hidden', 
               borderRadius: 3,
-              bgcolor: 'background.paper', // Light background
+              bgcolor: 'background.paper',
               border: '1px solid rgba(0,0,0,0.1)',
               display: 'flex',
               flexDirection: 'column',
@@ -203,6 +238,18 @@ const AnalysisView = ({ image, analysis, patient }) => {
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Success Snackbar */}
+      <Snackbar 
+        open={showSuccess} 
+        autoHideDuration={4000} 
+        onClose={() => setShowSuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setShowSuccess(false)} severity="success" variant="filled" sx={{ width: '100%', fontWeight: 'bold' }}>
+          Report submitted successfully! Results are now available in the patient's portal.
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
