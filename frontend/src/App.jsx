@@ -5,6 +5,7 @@ import Login from './pages/auth/Login';
 import MLTDashboard from './pages/mlt/MLTDashboard';
 import ClinicianDashboard from './pages/clinician/ClinicianDashboard';
 import PatientPortal from './pages/patient/PatientPortal';
+import UserProfile from './pages/shared/UserProfile';
 import Layout from './components/Layout';
 
 const PrivateRoute = ({ children, allowedRoles }) => {
@@ -54,6 +55,15 @@ function App() {
           element={
             <PrivateRoute allowedRoles={['PATIENT']}>
               <PatientPortal />
+            </PrivateRoute>
+          } 
+        />
+        
+        <Route 
+          path="profile" 
+          element={
+            <PrivateRoute allowedRoles={['MLT', 'CLINICIAN', 'PATIENT']}>
+              <UserProfile />
             </PrivateRoute>
           } 
         />

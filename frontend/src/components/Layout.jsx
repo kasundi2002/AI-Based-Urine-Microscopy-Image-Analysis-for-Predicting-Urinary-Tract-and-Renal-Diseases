@@ -4,7 +4,7 @@ import { styled, useTheme, alpha } from '@mui/material/styles';
 import { 
   Box, Toolbar, List, CssBaseline, Typography, Divider, IconButton, 
   ListItemButton, ListItemIcon, ListItemText, Avatar, Menu, MenuItem, 
-  Drawer as MuiDrawer, AppBar as MuiAppBar, useMediaQuery 
+  Drawer as MuiDrawer, AppBar as MuiAppBar, useMediaQuery, Divider as MuiDivider 
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -266,7 +266,17 @@ const Layout = () => {
               open={Boolean(anchorEl)}
               onClose={handleClose}
             >
-              <MenuItem disabled>{user?.name} ({user?.role})</MenuItem>
+              <MenuItem disabled sx={{ opacity: '0.7 !important', pb: 0.5 }}>
+                <Typography variant="body2" fontWeight={600}>{user?.name}</Typography>
+              </MenuItem>
+              <MenuItem disabled sx={{ opacity: '0.5 !important', pt: 0, mt: -0.5 }}>
+                <Typography variant="caption">{user?.role}</Typography>
+              </MenuItem>
+              <MuiDivider sx={{ my: 0.5 }} />
+              <MenuItem onClick={() => { handleClose(); navigate('/profile'); }}>
+                <ListItemIcon> <PersonIcon fontSize="small" /> </ListItemIcon>
+                My Profile
+              </MenuItem>
               <MenuItem onClick={handleLogout}>
                 <ListItemIcon> <LogoutIcon fontSize="small" /> </ListItemIcon>
                 Logout
