@@ -5,8 +5,9 @@ import {
   Box, Toolbar, List, CssBaseline, Typography, Divider, IconButton, 
   ListItemButton, ListItemIcon, ListItemText, Avatar, Menu, MenuItem, 
   Drawer as MuiDrawer, AppBar as MuiAppBar, useMediaQuery, 
-  Divider as MuiDivider, Tooltip, Chip
+  Divider as MuiDivider, Tooltip, Chip, Badge
 } from '@mui/material';
+import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -167,7 +168,7 @@ const Layout = () => {
               <Typography variant="h6" noWrap sx={{ color: '#00bcd4', fontWeight: 850, fontSize: '1.75rem', letterSpacing: -0.5, lineHeight: 1.2, mt: 1, mb: -1 }}>
                 Uro.AI
               </Typography>
-              <Typography variant="caption" sx={{ color: alpha('#fff', 0.6), fontSize: '0.6rem', letterSpacing: 1, textTransform: 'uppercase' }}>
+              <Typography variant="caption" sx={{ color: alpha('#fff', 0.5), fontSize: '0.6rem', letterSpacing: 1, textTransform: 'uppercase' }}>
                 Diagnostics
               </Typography>
             </Box>
@@ -367,6 +368,13 @@ const Layout = () => {
           
           <Box sx={{ flexGrow: 1 }} />
           
+          {/* Notification Bell */}
+          <IconButton sx={{ mr: 1, color: 'text.secondary', '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.04) } }}>
+            <Badge badgeContent={3} color="error" sx={{ '& .MuiBadge-badge': { fontSize: '0.65rem', height: 16, minWidth: 16 } }}>
+              <NotificationsNoneIcon sx={{ fontSize: 22 }} />
+            </Badge>
+          </IconButton>
+
           {/* User Avatar in AppBar */}
           <Box 
             onClick={handleMenu}
