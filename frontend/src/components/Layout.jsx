@@ -4,7 +4,8 @@ import { styled, useTheme, alpha } from '@mui/material/styles';
 import { 
   Box, Toolbar, List, CssBaseline, Typography, Divider, IconButton, 
   ListItemButton, ListItemIcon, ListItemText, Avatar, Menu, MenuItem, 
-  Drawer as MuiDrawer, AppBar as MuiAppBar, useMediaQuery, Divider as MuiDivider 
+  Drawer as MuiDrawer, AppBar as MuiAppBar, useMediaQuery, 
+  Divider as MuiDivider, Tooltip, Chip
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -15,9 +16,12 @@ import BiotechIcon from '@mui/icons-material/Biotech';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
+import SettingsIcon from '@mui/icons-material/Settings';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { useAuth } from '../context/AuthContext';
 
-const drawerWidth = 240;
+const drawerWidth = 260;
 
 const openedMixin = (theme) => ({
   width: drawerWidth,
@@ -28,7 +32,7 @@ const openedMixin = (theme) => ({
   overflowX: 'hidden',
   borderRadius: 0,
   borderRight: 'none',
-  background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)',
+  background: 'linear-gradient(180deg, #0a0f1e 0%, #111827 50%, #0f172a 100%)',
 });
 
 const closedMixin = (theme) => ({
@@ -37,13 +41,13 @@ const closedMixin = (theme) => ({
     duration: theme.transitions.duration.leavingScreen,
   }),
   overflowX: 'hidden',
-  width: `calc(${theme.spacing(7)} + 1px)`,
+  width: `calc(${theme.spacing(8)} + 1px)`,
   [theme.breakpoints.up('sm')]: {
-    width: `calc(${theme.spacing(8)} + 1px)`,
+    width: `calc(${theme.spacing(9)} + 1px)`,
   },
   borderRadius: 0,
   borderRight: 'none',
-  background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)',
+  background: 'linear-gradient(180deg, #0a0f1e 0%, #111827 50%, #0f172a 100%)',
 });
 
 const DrawerHeader = styled('div')(({ theme }) => ({
@@ -51,7 +55,6 @@ const DrawerHeader = styled('div')(({ theme }) => ({
   alignItems: 'center',
   justifyContent: 'flex-end',
   padding: theme.spacing(0, 1),
-  // necessary for content to be below app bar
   ...theme.mixins.toolbar,
 }));
 
@@ -62,7 +65,9 @@ const AppBar = styled(MuiAppBar, {
   borderRadius: 0,
   background: theme.palette.background.paper,
   backgroundImage: 'none',
-  boxShadow: theme.shadows[1],
+  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+  borderBottom: '1px solid',
+  borderColor: alpha(theme.palette.divider, 0.08),
   transition: theme.transitions.create(['width', 'margin'], {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
@@ -94,6 +99,15 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
   }),
 );
 
+const getRoleBadge = (role) => {
+  switch (role) {
+    case 'MLT': return { label: 'Lab Technician', color: '#00bcd4' };
+    case 'CLINICIAN': return { label: 'Clinician', color: '#7c4dff' };
+    case 'PATIENT': return { label: 'Patient', color: '#66bb6a' };
+    default: return { label: role, color: '#9e9e9e' };
+  }
+};
+
 const Layout = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -101,34 +115,21 @@ const Layout = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
-  const [open, setOpen] = useState(true); // Desktop state
-  const [mobileOpen, setMobileOpen] = useState(false); // Mobile state
+  const [open, setOpen] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
 
   const handleDrawerToggle = () => {
-    if (isMobile) {
-        setMobileOpen(!mobileOpen);
-    } else {
-        setOpen(!open);
-    }
+    if (isMobile) { setMobileOpen(!mobileOpen); } 
+    else { setOpen(!open); }
   };
 
-  const handleMenu = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const handleMenu = (event) => setAnchorEl(event.currentTarget);
+  const handleClose = () => setAnchorEl(null);
+  const handleLogout = () => { logout(); navigate('/login'); };
 
   const getMenuItems = () => {
     if (!user) return [];
-    
     switch (user.role) {
       case 'MLT':
         return [
@@ -149,144 +150,289 @@ const Layout = () => {
           { text: 'Analysis', icon: <BiotechIcon />, path: '/patient-portal?view=analysis' },
           { text: 'Results', icon: <AssignmentIcon />, path: '/patient-portal?view=results' }, 
         ];
-      default:
-        return [];
+      default: return [];
     }
   };
 
   const menuItems = getMenuItems();
+  const roleBadge = getRoleBadge(user?.role);
 
   const drawerContent = (
-      <>
-        <DrawerHeader>
-            <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', px: 2, justifyContent: open ? 'space-between' : 'center' }}>
-                {open && (
-                    <Typography variant="h4" noWrap component="div" sx={{ color: '#38bdf8', fontWeight: 700, letterSpacing: 0 }}>
-                    Uro.Al
-                    </Typography>
-                )}
-                 {!isMobile && (
-                     <IconButton onClick={handleDrawerToggle} sx={{ color: 'rgba(255,255,255,0.5)', '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.08)' } }}>
-                        {theme.direction === 'rtl' ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-                    </IconButton>
-                 )}
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Logo Header */}
+      <DrawerHeader>
+        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', px: open ? 2.5 : 1, justifyContent: open ? 'space-between' : 'center' }}>
+          {open && (
+            <Box>
+              <Typography variant="h6" noWrap sx={{ color: '#00bcd4', fontWeight: 850, fontSize: '1.75rem', letterSpacing: -0.5, lineHeight: 1.2, mt: 1, mb: -1 }}>
+                Uro.AI
+              </Typography>
+              <Typography variant="caption" sx={{ color: alpha('#fff', 0.6), fontSize: '0.6rem', letterSpacing: 1, textTransform: 'uppercase' }}>
+                Diagnostics
+              </Typography>
             </Box>
-        </DrawerHeader>
-        <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
-        <List sx={{ px: 1.5, mt: 1 }}>
-          {menuItems.map((item) => {
-            const isSelected = location.pathname + location.search === item.path;
-            
-            return (
-            <ListItemButton
-              key={item.text}
-              onClick={() => {
-                  navigate(item.path);
-                  if (isMobile) setMobileOpen(false);
-              }}
-              selected={isSelected}
-              sx={{
-                minHeight: 48,
-                justifyContent: open ? 'initial' : 'center',
-                px: 2,
-                mb: 0.5,
-                borderRadius: 2,
-                '&.Mui-selected': {
-                    backgroundColor: alpha('#38bdf8', 0.15),
-                    '&:hover': { backgroundColor: alpha('#38bdf8', 0.2) }
-                },
-                '&:hover': { backgroundColor: 'rgba(255,255,255,0.06)' },
+          )}
+          {!open && (
+            <Typography sx={{ color: '#00bcd4', fontWeight: 900, fontSize: '1rem' }}>U</Typography>
+          )}
+          {!isMobile && open && (
+            <IconButton 
+              onClick={handleDrawerToggle} 
+              sx={{ 
+                color: alpha('#fff', 0.4), width: 28, height: 28,
+                '&:hover': { color: '#fff', bgcolor: alpha('#fff', 0.06) } 
               }}
             >
-              <ListItemIcon
+              <ChevronLeftIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          )}
+        </Box>
+      </DrawerHeader>
+
+      {/* Subtle separator */}
+      {/* <Box sx={{ mx: open ? 2.5 : 1.5, my: 0.5, height: 1, bgcolor: alpha('#fff', 0.06), borderRadius: 1 }} /> */}
+
+      {/* Section label */}
+      {open && (
+        <Typography variant="caption" sx={{ 
+          px: 3, pt: 2, pb: 1, color: alpha('#fff', 0.3), fontSize: '0.65rem', 
+          fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase'
+        }}>
+          Navigation
+        </Typography>
+      )}
+
+      {/* Nav Items */}
+      <List sx={{ px: open ? 1.5 : 1, mt: open ? 0 : 1, flex: 1 }}>
+        {menuItems.map((item) => {
+          const isSelected = location.pathname + location.search === item.path;
+          return (
+            <Tooltip key={item.text} title={!open ? item.text : ''} placement="right" arrow>
+              <ListItemButton
+                onClick={() => { navigate(item.path); if (isMobile) setMobileOpen(false); }}
+                selected={isSelected}
                 sx={{
-                  minWidth: 0,
-                  mr: open ? 2.5 : 'auto',
-                  justifyContent: 'center',
-                  color: isSelected ? '#38bdf8' : 'rgba(255,255,255,0.5)'
+                  minHeight: 44,
+                  justifyContent: open ? 'initial' : 'center',
+                  px: open ? 2 : 1.5,
+                  mb: 0.5,
+                  borderRadius: 2,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&.Mui-selected': {
+                    backgroundColor: alpha('#00bcd4', 0.1),
+                    '&:hover': { backgroundColor: alpha('#00bcd4', 0.14) },
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      left: 0,
+                      top: '20%',
+                      height: '60%',
+                      width: 3,
+                      borderRadius: '0 3px 3px 0',
+                      background: 'linear-gradient(180deg, #00bcd4, #0097a7)',
+                      boxShadow: '0 0 8px rgba(0,188,212,0.4)',
+                    }
+                  },
+                  '&:hover': { backgroundColor: alpha('#fff', 0.04) },
                 }}
               >
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText 
-                primary={item.text} 
-                primaryTypographyProps={{ 
+                <ListItemIcon
+                  sx={{
+                    minWidth: 0,
+                    mr: open ? 2 : 'auto',
+                    justifyContent: 'center',
+                    color: isSelected ? '#00bcd4' : alpha('#fff', 0.45),
+                    transition: 'color 0.2s',
+                  }}
+                >
+                  {React.cloneElement(item.icon, { sx: { fontSize: 20 } })}
+                </ListItemIcon>
+                <ListItemText 
+                  primary={item.text} 
+                  primaryTypographyProps={{ 
                     fontWeight: isSelected ? 700 : 500,
-                    fontSize: '0.9rem',
-                    color: isSelected ? '#fff' : 'rgba(255,255,255,0.7)'
-                }}
-                sx={{ opacity: open ? 1 : 0 }} 
-              />
-            </ListItemButton>
-          )})}
+                    fontSize: '0.85rem',
+                    color: isSelected ? '#fff' : alpha('#fff', 0.65),
+                    letterSpacing: isSelected ? 0 : -0.1,
+                  }}
+                  sx={{ opacity: open ? 1 : 0, transition: 'opacity 0.2s' }} 
+                />
+                {isSelected && open && (
+                  <Box sx={{ 
+                    width: 6, height: 6, borderRadius: '50%', 
+                    bgcolor: '#00bcd4', 
+                    boxShadow: '0 0 6px rgba(0,188,212,0.6)' 
+                  }} />
+                )}
+              </ListItemButton>
+            </Tooltip>
+          );
+        })}
+      </List>
+
+      {/* Bottom Section */}
+      <Box sx={{ mt: 'auto' }}>
+        {/* Help & Settings */}
+        {open && (
+          <Typography variant="caption" sx={{ 
+            px: 3, pt: 1, pb: 0.5, color: alpha('#fff', 0.3), fontSize: '0.65rem', 
+            fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', display: 'block'
+          }}>
+            Support
+          </Typography>
+        )}
+        <List sx={{ px: open ? 1.5 : 1, pb: 0.5 }}>
+          {[
+            { text: 'Settings', icon: <SettingsIcon /> },
+            { text: 'Help Center', icon: <HelpOutlineIcon /> },
+          ].map(item => (
+            <Tooltip key={item.text} title={!open ? item.text : ''} placement="right" arrow>
+              <ListItemButton sx={{ 
+                minHeight: 40, justifyContent: open ? 'initial' : 'center',
+                px: open ? 2 : 1.5, mb: 0.3, borderRadius: 2,
+                '&:hover': { bgcolor: alpha('#fff', 0.04) }
+              }}>
+                <ListItemIcon sx={{ minWidth: 0, mr: open ? 2 : 'auto', justifyContent: 'center', color: alpha('#fff', 0.35) }}>
+                  {React.cloneElement(item.icon, { sx: { fontSize: 18 } })}
+                </ListItemIcon>
+                <ListItemText 
+                  primary={item.text} 
+                  primaryTypographyProps={{ fontSize: '0.8rem', fontWeight: 500, color: alpha('#fff', 0.5) }}
+                  sx={{ opacity: open ? 1 : 0 }} 
+                />
+              </ListItemButton>
+            </Tooltip>
+          ))}
         </List>
-      </>
+
+        {/* Separator */}
+        {/* <Box sx={{ mx: open ? 2.5 : 1.5, height: 1, bgcolor: alpha('#fff', 0.06), borderRadius: 1 }} /> */}
+
+        {/* User Profile Card */}
+        <Box sx={{ p: open ? 2 : 1.5, pb: open ? 2.5 : 2 }}>
+          <Box 
+            onClick={handleMenu}
+            sx={{ 
+              display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer',
+              p: open ? 1.5 : 1, borderRadius: 2.5,
+              bgcolor: alpha('#fff', 0.03),
+              border: '1px solid', borderColor: alpha('#fff', 0.06),
+              transition: 'all 0.2s',
+              '&:hover': { bgcolor: alpha('#fff', 0.06), borderColor: alpha('#fff', 0.1) },
+              justifyContent: open ? 'flex-start' : 'center'
+            }}
+          >
+            <Avatar sx={{ 
+              width: 34, height: 34, fontSize: '0.8rem', fontWeight: 800,
+              background: `linear-gradient(135deg, ${roleBadge.color}, ${alpha(roleBadge.color, 0.7)})`,
+              boxShadow: `0 2px 8px ${alpha(roleBadge.color, 0.3)}`,
+            }}>
+              {user?.name?.charAt(0) || 'U'}
+            </Avatar>
+            {open && (
+              <>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="body2" sx={{ color: '#fff', fontWeight: 700, fontSize: '0.8rem', lineHeight: 1.3 }} noWrap>
+                    {user?.name || 'User'}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: roleBadge.color, fontWeight: 600, fontSize: '0.65rem' }}>
+                    {roleBadge.label}
+                  </Typography>
+                </Box>
+                <KeyboardArrowDownIcon sx={{ fontSize: 16, color: alpha('#fff', 0.3) }} />
+              </>
+            )}
+          </Box>
+        </Box>
+      </Box>
+    </Box>
   );
 
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
-      <AppBar position="fixed" open={open && !isMobile}>
-        <Toolbar>
+      <AppBar position="fixed" open={open && !isMobile} elevation={0}>
+        <Toolbar sx={{ minHeight: '56px !important' }}>
           <IconButton
-            color="inherit"
+            color="black"
             aria-label="open drawer"
             onClick={handleDrawerToggle}
             edge="start"
-            sx={{
-              marginRight: 5,
-              ...( (open && !isMobile) && { display: 'none' }),
-            }}
+            sx={{ marginRight: 3, ...((open && !isMobile) && { display: 'none' }), }}
           >
             <MenuIcon />
           </IconButton>
           
           <Box sx={{ flexGrow: 1 }} />
           
-          {/* User Profile Menu */}
-          <div>
-            <IconButton
-              size="large"
-              aria-label="account of current user"
-              aria-controls="menu-appbar"
-              aria-haspopup="true"
-              onClick={handleMenu}
-              color="inherit"
+          {/* User Avatar in AppBar */}
+          <Box 
+            onClick={handleMenu}
+            sx={{ 
+              display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer',
+              py: 0.5, px: 1.5, borderRadius: 3,
+              transition: 'all 0.15s',
+              '&:hover': { bgcolor: alpha(theme.palette.text.primary, 0.04) }
+            }}
+          >
+            <Avatar sx={{ 
+              width: 32, height: 32, fontSize: '0.75rem', fontWeight: 800,
+              background: `linear-gradient(135deg, ${roleBadge.color}, ${alpha(roleBadge.color, 0.7)})`,
+            }}>
+              {user?.name?.charAt(0) || <AccountCircle />}
+            </Avatar>
+          </Box>
+          <Menu
+            id="menu-appbar"
+            anchorEl={anchorEl}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            keepMounted
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            open={Boolean(anchorEl)}
+            onClose={handleClose}
+            PaperProps={{
+              elevation: 0,
+              sx: {
+                mt: 1, borderRadius: 2.5, minWidth: 200,
+                border: '1px solid', borderColor: 'divider',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                overflow: 'visible',
+                '&::before': {
+                  content: '""', display: 'block', position: 'absolute',
+                  top: -6, right: 20, width: 12, height: 12,
+                  bgcolor: 'background.paper', transform: 'rotate(45deg)',
+                  border: '1px solid', borderColor: 'divider',
+                  borderBottom: 'none', borderRight: 'none',
+                }
+              }
+            }}
+          >
+            <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="subtitle2" fontWeight={700}>{user?.name}</Typography>
+              <Typography variant="caption" sx={{ color: roleBadge.color, fontWeight: 600 }}>{roleBadge.label}</Typography>
+            </Box>
+            <MenuItem 
+              onClick={() => { handleClose(); navigate('/profile'); }} 
+              sx={{ mx: 1, my: 0.5, borderRadius: 1.5, fontSize: '0.85rem' }}
             >
-              <Avatar sx={{ bgcolor: 'secondary.main', width: 32, height: 32 }}>
-                {user?.name?.charAt(0) || <AccountCircle />}
-              </Avatar>
-            </IconButton>
-            <Menu
-              id="menu-appbar"
-              anchorEl={anchorEl}
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-              keepMounted
-              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-              open={Boolean(anchorEl)}
-              onClose={handleClose}
+              <ListItemIcon><PersonIcon fontSize="small" /></ListItemIcon>
+              My Profile
+            </MenuItem>
+            <MuiDivider sx={{ mx: 1.5 }} />
+            <MenuItem 
+              onClick={handleLogout}
+              sx={{ mx: 1, my: 0.5, borderRadius: 1.5, fontSize: '0.85rem', color: '#ef5350' }}
             >
-              <MenuItem disabled sx={{ opacity: '0.7 !important', pb: 0.5 }}>
-                <Typography variant="body2" fontWeight={600}>{user?.name}</Typography>
-              </MenuItem>
-              <MenuItem disabled sx={{ opacity: '0.5 !important', pt: 0, mt: -0.5 }}>
-                <Typography variant="caption">{user?.role}</Typography>
-              </MenuItem>
-              <MuiDivider sx={{ my: 0.5 }} />
-              <MenuItem onClick={() => { handleClose(); navigate('/profile'); }}>
-                <ListItemIcon> <PersonIcon fontSize="small" /> </ListItemIcon>
-                My Profile
-              </MenuItem>
-              <MenuItem onClick={handleLogout}>
-                <ListItemIcon> <LogoutIcon fontSize="small" /> </ListItemIcon>
-                Logout
-              </MenuItem>
-            </Menu>
-          </div>
+              <ListItemIcon><LogoutIcon fontSize="small" sx={{ color: '#ef5350' }} /></ListItemIcon>
+              Logout
+            </MenuItem>
+          </Menu>
         </Toolbar>
       </AppBar>
 
-      {/* Mobile Drawer (Temporary) */}
+      {/* Mobile Drawer */}
       <MuiDrawer
         variant="temporary"
         open={mobileOpen}
@@ -294,18 +440,18 @@ const Layout = () => {
         ModalProps={{ keepMounted: true }}
         sx={{
           display: { xs: 'block', md: 'none' },
-          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)', borderRight: 'none' },
+          '& .MuiDrawer-paper': { 
+            boxSizing: 'border-box', width: drawerWidth, 
+            background: 'linear-gradient(180deg, #0a0f1e 0%, #111827 50%, #0f172a 100%)', 
+            borderRight: 'none' 
+          },
         }}
       >
         {drawerContent}
       </MuiDrawer>
 
-      {/* Desktop Drawer (Permanent / Varied Width) */}
-      <Drawer 
-            variant="permanent" 
-            open={open} 
-            sx={{ display: { xs: 'none', md: 'block' } }}
-      >
+      {/* Desktop Drawer */}
+      <Drawer variant="permanent" open={open} sx={{ display: { xs: 'none', md: 'block' } }}>
         {drawerContent}
       </Drawer>
 
