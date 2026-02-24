@@ -1,25 +1,62 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Box, Paper, Typography, Button, TextField, Autocomplete, Tabs, Tab, 
-  CircularProgress, Grid, Divider 
+  CircularProgress, Grid, Divider, Avatar, Chip, Stepper, Step, StepLabel, StepConnector
 } from '@mui/material';
+import { alpha, styled } from '@mui/material/styles';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import VideocamIcon from '@mui/icons-material/Videocam';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import PersonIcon from '@mui/icons-material/Person';
+import PersonSearchIcon from '@mui/icons-material/PersonSearch';
+import PhotoCameraBackIcon from '@mui/icons-material/PhotoCameraBack';
+import ScienceIcon from '@mui/icons-material/Science';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import ImageUpload from './ImageUpload';
 import AnalysisView from './AnalysisView';
 import { api } from '../../services/api';
-import microscopyImage from '../../assets/c5.jpg'; // Import generic image for mock results
+import microscopyImage from '../../assets/c5.jpg';
+
+const StepIconRoot = styled('div')(({ ownerState }) => ({
+  width: 36, height: 36, borderRadius: '50%',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  fontWeight: 700, fontSize: '0.85rem',
+  ...(ownerState.active && {
+    background: 'linear-gradient(135deg, #0f172a, #1e3a5f)',
+    color: 'white',
+    boxShadow: '0 3px 10px rgba(15,23,42,0.3)',
+  }),
+  ...(ownerState.completed && {
+    bgcolor: '#00bcd4',
+    background: '#00bcd4',
+    color: 'white',
+  }),
+  ...(!ownerState.active && !ownerState.completed && {
+    backgroundColor: alpha('#9e9e9e', 0.12),
+    color: '#9e9e9e',
+  }),
+}));
+
+function CustomStepIcon(props) {
+  const { active, completed, icon } = props;
+  const icons = { 1: <PersonSearchIcon sx={{ fontSize: 18 }} />, 2: <PhotoCameraBackIcon sx={{ fontSize: 18 }} />, 3: <ScienceIcon sx={{ fontSize: 18 }} /> };
+  return (
+    <StepIconRoot ownerState={{ active, completed }}>
+      {completed ? <CheckCircleIcon sx={{ fontSize: 20 }} /> : icons[String(icon)]}
+    </StepIconRoot>
+  );
+}
 
 const AnalysisWorkflow = ({ preSelectedPatient }) => {
   const [selectedPatient, setSelectedPatient] = useState(preSelectedPatient || null);
   const [patients, setPatients] = useState([]);
-  const [inputMethod, setInputMethod] = useState(0); // 0: Upload, 1: Camera
+  const [inputMethod, setInputMethod] = useState(0);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [uploadedImage, setUploadedImage] = useState(null);
   
-  // Camera state
   const videoRef = useRef(null);
   const [stream, setStream] = useState(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -40,41 +77,27 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
 
   useEffect(() => {
     if (preSelectedPatient) {
-        setSelectedPatient(preSelectedPatient);
-        
-        // Auto-load result if patient is already processed
-        if (preSelectedPatient.status === 'Ready for Review' || preSelectedPatient.status === 'Completed') {
-            setUploadedImage(microscopyImage);
-            setAnalysisResult({
-                wbc: 5,
-                rbc: 2,
-                crystals: 'Calcium Oxalate',
-                risk: 45
-            });
-        } else {
-            // Reset if new analysis needed
-            setAnalysisResult(null);
-            setUploadedImage(null);
-        }
+      setSelectedPatient(preSelectedPatient);
+      if (preSelectedPatient.status === 'Ready for Review' || preSelectedPatient.status === 'Completed') {
+        setUploadedImage(microscopyImage);
+        setAnalysisResult({ wbc: 5, rbc: 2, crystals: 'Calcium Oxalate', risk: 45 });
+      } else {
+        setAnalysisResult(null);
+        setUploadedImage(null);
+      }
     }
   }, [preSelectedPatient]);
 
-  // Clean up stream on unmount
   useEffect(() => {
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
+      if (stream) stream.getTracks().forEach(track => track.stop());
     };
   }, [stream]);
 
   const handleTabChange = (event, newValue) => {
     setInputMethod(newValue);
-    if (newValue === 1) {
-        startCamera();
-    } else {
-        stopCamera();
-    }
+    if (newValue === 1) startCamera();
+    else stopCamera();
   };
 
   const startCamera = async () => {
@@ -82,12 +105,9 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
       const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
       setStream(mediaStream);
       setIsCameraActive(true);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
+      if (videoRef.current) videoRef.current.srcObject = mediaStream;
     } catch (err) {
       console.error("Error accessing camera:", err);
-      // alert("Could not access camera. Please check permissions."); // Suppress alert for better UX in mock
     }
   };
 
@@ -104,14 +124,10 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
       const canvas = document.createElement('canvas');
       canvas.width = videoRef.current.videoWidth;
       canvas.height = videoRef.current.videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(videoRef.current, 0, 0);
-      
+      canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
       canvas.toBlob((blob) => {
-         const file = new File([blob], "microscope_capture.png", { type: "image/png" });
-         handleAnalysis(file);
+        handleAnalysis(new File([blob], "microscope_capture.png", { type: "image/png" }));
       }, 'image/png');
-      
       stopCamera();
     }
   };
@@ -129,168 +145,244 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
     }
   };
 
-  const getOptionLabel = (option) => {
-      if (!option) return '';
-      return `${option.name} (ID: ${option.id})`;
-  }
+  const getOptionLabel = (option) => option ? `${option.name} (ID: ${option.id})` : '';
+
+  const activeStep = analysisResult ? 2 : selectedPatient ? 1 : 0;
 
   // Render Result View
   if (analysisResult && uploadedImage) {
-      return (
-          <Box>
-            <Button onClick={() => { 
-                setAnalysisResult(null); 
-                setUploadedImage(null); 
-                setInputMethod(0);
-            }} sx={{ mb: 2 }}>
-                &larr; New Analysis
-            </Button>
-            <AnalysisView image={uploadedImage} analysis={analysisResult} patient={selectedPatient} />
-          </Box>
-      )
+    return (
+      <Box sx={{ animation: 'fadeIn 0.4s ease-out' }}>
+        <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+        <Button 
+          onClick={() => { setAnalysisResult(null); setUploadedImage(null); setInputMethod(0); }}
+          startIcon={<ArrowBackIcon />}
+          sx={{ mb: 2, textTransform: 'none', fontWeight: 600, color: '#00bcd4' }}
+        >
+          ← New Analysis
+        </Button>
+        <AnalysisView image={uploadedImage} analysis={analysisResult} patient={selectedPatient} />
+      </Box>
+    );
   }
 
   return (
-    <Box sx={{ animation: 'fadeIn 0.5s ease-in-out' }}>
-        <style>
-            {`
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-            `}
-        </style>
-       <Typography variant="h5" sx={{ mb: 4, fontWeight: 'bold' }}>
-            Analysis Workspace
-       </Typography>
-       
-       <Grid container spacing={4}>
-           {/* Left Panel: Patient Selection */}
-           <Grid size={{ xs: 12, md: 4 }}>
-               <Paper sx={{ 
-                   p: 4, 
-                   height: '100%', 
-                   borderRadius: 3,
-                   borderBottom: '4px solid #00bcd4',
-                   transition: 'transform 0.2s',
-                   '&:hover': { transform: 'translateY(-4px)', boxShadow: 6 }
-               }}>
-                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                       <Box sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', mr: 2 }}>1</Box>
-                       <Typography variant="h6" fontWeight="bold">Select Patient</Typography>
-                   </Box>
-                   
-                   <Autocomplete
-                        options={patients}
-                        getOptionLabel={getOptionLabel}
-                        value={selectedPatient}
-                        onChange={(event, newValue) => setSelectedPatient(newValue)}
-                        renderInput={(params) => <TextField {...params} label="Search Patient ID or Name" variant="outlined" />}
-                        sx={{ mb: 3 }}
-                   />
-                   
-                   {selectedPatient ? (
-                       <Box sx={{ p: 3, bgcolor: 'rgba(0, 188, 212, 0.08)', borderRadius: 2, border: '1px solid rgba(0, 188, 212, 0.2)' }}>
-                           <Typography variant="subtitle2" color="primary.main" gutterBottom>SELECTED PATIENT</Typography>
-                           <Typography variant="h6" fontWeight="bold">{selectedPatient.name}</Typography>
-                           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>ID: {selectedPatient.id}</Typography>
-                           <Typography variant="body2" color="text.secondary">Age: {selectedPatient.age}</Typography>
-                           <Divider sx={{ my: 2 }} />
-                           <Typography variant="caption" sx={{ bgcolor: 'background.paper', px: 1, py: 0.5, borderRadius: 1, border: '1px solid divider' }}>
-                               History: Recurrent Stones
-                           </Typography>
-                       </Box>
-                   ) : (
-                       <Box sx={{ p: 4, textAlign: 'center', bgcolor: 'background.default', borderRadius: 2, border: '1px dashed divider' }}>
-                           <Typography variant="body2" color="text.secondary">No patient selected</Typography>
-                       </Box>
-                   )}
-               </Paper>
-           </Grid>
+    <Box sx={{ animation: 'fadeIn 0.4s ease-out' }}>
+      <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
 
-           {/* Right Panel: Image Input */}
-           <Grid size={{ xs: 12, md: 8 }}>
-               <Paper sx={{ 
-                   p: 4, 
-                   height: '100%',
-                   borderRadius: 3,
-                   borderBottom: '4px solid #00bcd4',
-                   opacity: selectedPatient ? 1 : 0.7,
-                   pointerEvents: selectedPatient ? 'auto' : 'none',
-                   transition: 'opacity 0.3s'
-               }}>
-                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                       <Box sx={{ width: 32, height: 32, borderRadius: '50%', bgcolor: selectedPatient ? 'primary.main' : 'action.disabled', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', mr: 2 }}>2</Box>
-                       <Typography variant="h6" fontWeight="bold" color={selectedPatient ? 'text.primary' : 'text.secondary'}>Acquire Image</Typography>
-                   </Box>
-                   
-                   {!selectedPatient ? (
-                        <Box sx={{ p: 10, textAlign: 'center', color: 'text.secondary', border: '1px dashed divider', borderRadius: 2 }}>
-                            <Typography>Please select a patient first to proceed with analysis.</Typography>
+      {/* Header */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+            <ScienceIcon sx={{ color: '#00bcd4', fontSize: 28 }} />
+            <Typography variant="h5" fontWeight={800} sx={{ letterSpacing: -0.5 }}>Analysis Workspace</Typography>
+          </Box>
+          <Typography variant="body2" color="text.secondary">
+            Select a patient, upload a microscopy image, and run AI analysis
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* Progress Stepper */}
+      <Paper elevation={0} sx={{ px: 4, py: 2, mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+        <Stepper activeStep={activeStep} alternativeLabel
+          connector={<StepConnector sx={{ '& .MuiStepConnector-line': { borderColor: alpha('#00bcd4', 0.2), borderTopWidth: 2 } }} />}
+        >
+          {['Select Patient', 'Acquire Image', 'AI Analysis'].map((label, idx) => (
+            <Step key={label} completed={activeStep > idx}>
+              <StepLabel StepIconComponent={CustomStepIcon}>
+                <Typography variant="caption" fontWeight={activeStep >= idx ? 700 : 500} color={activeStep >= idx ? 'text.primary' : 'text.secondary'}>
+                  {label}
+                </Typography>
+              </StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+      </Paper>
+
+      <Grid container spacing={3}>
+        {/* Left Panel: Patient Selection */}
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Paper elevation={0} sx={{ 
+            borderRadius: 3, overflow: 'hidden', height: '100%',
+            border: '1px solid', borderColor: selectedPatient ? '#00bcd4' : 'divider',
+            transition: 'border-color 0.3s',
+          }}>
+            <Box sx={{ 
+              px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider',
+              display: 'flex', alignItems: 'center', gap: 1.5,
+              bgcolor: selectedPatient ? alpha('#00bcd4', 0.03) : 'transparent',
+            }}>
+              <PersonSearchIcon sx={{ color: '#00bcd4', fontSize: 20 }} />
+              <Typography variant="subtitle1" fontWeight={700}>Select Patient</Typography>
+              {selectedPatient && <CheckCircleIcon sx={{ fontSize: 16, color: '#66bb6a', ml: 'auto' }} />}
+            </Box>
+
+            <Box sx={{ p: 3 }}>
+              <Autocomplete
+                options={patients}
+                getOptionLabel={getOptionLabel}
+                value={selectedPatient}
+                onChange={(event, newValue) => setSelectedPatient(newValue)}
+                renderInput={(params) => (
+                  <TextField 
+                    {...params} 
+                    placeholder="Search by name or ID..." 
+                    variant="outlined" 
+                    size="small"
+                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                  />
+                )}
+                sx={{ mb: 3 }}
+              />
+              
+              {selectedPatient ? (
+                <Paper elevation={0} sx={{ 
+                  p: 2.5, borderRadius: 2.5,
+                  border: '1px solid', borderColor: alpha('#00bcd4', 0.15),
+                  bgcolor: alpha('#00bcd4', 0.03),
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                    <Avatar sx={{ width: 44, height: 44, bgcolor: alpha('#00bcd4', 0.1), color: '#00bcd4', fontWeight: 700 }}>
+                      {selectedPatient.name?.charAt(0)}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight={700}>{selectedPatient.name}</Typography>
+                      <Typography variant="caption" color="text.secondary">ID: {selectedPatient.id}</Typography>
+                    </Box>
+                  </Box>
+                  <Divider sx={{ my: 1.5 }} />
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="caption" color="text.secondary">Age</Typography>
+                      <Typography variant="caption" fontWeight={600}>{selectedPatient.age}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="caption" color="text.secondary">Status</Typography>
+                      <Chip label={selectedPatient.status} size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 600 }} />
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="caption" color="text.secondary">History</Typography>
+                      <Typography variant="caption" fontWeight={600}>Recurrent Stones</Typography>
+                    </Box>
+                  </Box>
+                </Paper>
+              ) : (
+                <Box sx={{ 
+                  p: 4, textAlign: 'center', borderRadius: 2.5,
+                  border: '1px dashed', borderColor: 'divider',
+                }}>
+                  <PersonIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
+                  <Typography variant="body2" color="text.secondary">No patient selected</Typography>
+                  <Typography variant="caption" color="text.disabled">Search or select from the dropdown</Typography>
+                </Box>
+              )}
+            </Box>
+          </Paper>
+        </Grid>
+
+        {/* Right Panel: Image Input */}
+        <Grid size={{ xs: 12, md: 8 }}>
+          <Paper elevation={0} sx={{ 
+            borderRadius: 3, overflow: 'hidden', height: '100%',
+            border: '1px solid', borderColor: 'divider',
+            opacity: selectedPatient ? 1 : 0.5,
+            pointerEvents: selectedPatient ? 'auto' : 'none',
+            transition: 'opacity 0.3s',
+          }}>
+            <Box sx={{ 
+              px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider',
+              display: 'flex', alignItems: 'center', gap: 1.5
+            }}>
+              <PhotoCameraBackIcon sx={{ color: selectedPatient ? '#00bcd4' : 'text.disabled', fontSize: 20 }} />
+              <Typography variant="subtitle1" fontWeight={700} color={selectedPatient ? 'text.primary' : 'text.secondary'}>
+                Acquire Image
+              </Typography>
+            </Box>
+            
+            <Box sx={{ p: 3 }}>
+              {!selectedPatient ? (
+                <Box sx={{ p: 8, textAlign: 'center' }}>
+                  <CloudUploadIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+                  <Typography variant="body1" color="text.secondary">Please select a patient first</Typography>
+                  <Typography variant="caption" color="text.disabled">A patient must be selected before uploading a sample image</Typography>
+                </Box>
+              ) : (
+                <>
+                  <Tabs 
+                    value={inputMethod} 
+                    onChange={handleTabChange} 
+                    sx={{ 
+                      mb: 3, 
+                      '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, minHeight: 44 },
+                      '& .MuiTabs-indicator': { bgcolor: '#00bcd4', height: 3, borderRadius: '3px 3px 0 0' },
+                    }}
+                  >
+                    <Tab icon={<CloudUploadIcon sx={{ fontSize: 18 }} />} label="Upload File" iconPosition="start" />
+                    <Tab icon={<VideocamIcon sx={{ fontSize: 18 }} />} label="Microscope Camera" iconPosition="start" />
+                  </Tabs>
+
+                  {analyzing ? (
+                    <Box sx={{ p: 8, textAlign: 'center' }}>
+                      <Box sx={{ position: 'relative', display: 'inline-flex', mb: 3 }}>
+                        <CircularProgress size={70} thickness={3} sx={{ color: '#00bcd4' }} />
+                        <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <ScienceIcon sx={{ fontSize: 28, color: '#00bcd4' }} />
                         </Box>
-                   ) : (
-                       <>
-                        <Tabs 
-                            value={inputMethod} 
-                            onChange={handleTabChange} 
-                            sx={{ mb: 4, borderBottom: 1, borderColor: 'divider' }}
-                            indicatorColor="primary"
-                            textColor="primary"
-                        >
-                            <Tab icon={<CloudUploadIcon />} label="Upload File" iconPosition="start" />
-                            <Tab icon={<VideocamIcon />} label="Microscope Camera" iconPosition="start" />
-                        </Tabs>
+                      </Box>
+                      <Typography variant="h6" fontWeight={700}>Analyzing Sample...</Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        Running AI detection for crystals, cells, and bacteria
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <>
+                      {inputMethod === 0 && <ImageUpload onUpload={handleAnalysis} />}
 
-                        {analyzing ? (
-                            <Box sx={{ p: 8, textAlign: 'center' }}>
-                                <CircularProgress size={60} thickness={4} />
-                                <Typography variant="h6" sx={{ mt: 3, fontWeight: 'bold' }}>Analyzing Sample...</Typography>
-                                <Typography variant="body2" color="text.secondary">Running AI detection for crystals and cells.</Typography>
+                      {inputMethod === 1 && (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          {isCameraActive ? (
+                            <Paper elevation={0} sx={{ 
+                              width: '100%', height: 400, bgcolor: '#000', mb: 3, overflow: 'hidden', borderRadius: 3,
+                              display: 'flex', justifyContent: 'center', border: '1px solid', borderColor: 'divider'
+                            }}>
+                              <video ref={videoRef} autoPlay playsInline style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                            </Paper>
+                          ) : (
+                            <Box sx={{ 
+                              width: '100%', height: 300, mb: 3, borderRadius: 3,
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                              border: '2px dashed', borderColor: alpha('#9e9e9e', 0.2), bgcolor: alpha('#f8fafc', 0.5)
+                            }}>
+                              <VideocamIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
+                              <Typography variant="body2" color="text.secondary">Camera is initializing...</Typography>
                             </Box>
-                        ) : (
-                            <>
-                                {inputMethod === 0 && (
-                                    <Box sx={{ p: 2 }}>
-                                        <ImageUpload onUpload={handleAnalysis} />
-                                    </Box>
-                                )}
-
-                                {inputMethod === 1 && (
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                        {isCameraActive ? (
-                                            <Paper elevation={4} sx={{ width: '100%', height: 450, bgcolor: '#000', mb: 3, display: 'flex', justifyContent: 'center', overflow: 'hidden', borderRadius: 2 }}>
-                                                <video ref={videoRef} autoPlay playsInline style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                                            </Paper>
-                                        ) : (
-                                            <Box sx={{ width: '100%', height: 300, bgcolor: 'background.default', mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 2, border: '1px dashed #666' }}>
-                                                <Typography variant="body1" color="text.secondary">Camera is currently inactive</Typography>
-                                            </Box>
-                                        )}
-                                        
-                                        <Button 
-                                            variant="contained" 
-                                            size="large"
-                                            startIcon={<CameraAltIcon />} 
-                                            onClick={captureImage}
-                                            disabled={!isCameraActive}
-                                            sx={{ 
-                                                py: 1.5, px: 4, 
-                                                borderRadius: 2,
-                                                background: isCameraActive ? 'linear-gradient(45deg, #f44336 30%, #ff1744 90%)' : undefined,
-                                                boxShadow: isCameraActive ? '0 3px 5px 2px rgba(255, 23, 68, .3)' : undefined
-                                            }}
-                                        >
-                                            Capture & Analyze
-                                        </Button>
-                                    </Box>
-                                )}
-                            </>
-                        )}
-                       </>
-                   )}
-               </Paper>
-           </Grid>
-       </Grid>
+                          )}
+                          
+                          <Button 
+                            variant="contained" 
+                            size="large"
+                            startIcon={<CameraAltIcon />} 
+                            onClick={captureImage}
+                            disabled={!isCameraActive}
+                            sx={{ 
+                              py: 1.5, px: 5, borderRadius: 2, textTransform: 'none', fontWeight: 700,
+                              background: isCameraActive ? 'linear-gradient(135deg, #ef5350, #c62828)' : undefined,
+                              boxShadow: isCameraActive ? '0 4px 14px rgba(239,83,80,0.3)' : undefined
+                            }}
+                          >
+                            Capture & Analyze
+                          </Button>
+                        </Box>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
     </Box>
   );
 };
