@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, 
   Typography, Chip, IconButton, Tooltip, Box, Button, Avatar, TextField,
-  InputAdornment
+  InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions,
+  Grid, MenuItem, Snackbar, Alert
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -13,11 +14,20 @@ import SearchIcon from '@mui/icons-material/Search';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import CloseIcon from '@mui/icons-material/Close';
+import SaveIcon from '@mui/icons-material/Save';
 import { api } from '../../services/api';
+
+const emptyForm = { name: '', age: '', gender: '', phone: '', notes: '' };
 
 const PatientQueue = ({ onSelectPatient }) => {
   const [patients, setPatients] = useState([]);
   const [search, setSearch] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     const fetchPatients = async () => {
@@ -49,6 +59,47 @@ const PatientQueue = ({ onSelectPatient }) => {
     !search || p.name?.toLowerCase().includes(search.toLowerCase()) || p.id?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleOpenDialog = () => {
+    setForm(emptyForm);
+    setErrors({});
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setForm(emptyForm);
+    setErrors({});
+  };
+
+  const handleFormChange = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
+  };
+
+  const validate = () => {
+    const newErrors = {};
+    if (!form.name.trim()) newErrors.name = 'Patient name is required';
+    if (!form.age) newErrors.age = 'Age is required';
+    else if (isNaN(form.age) || parseInt(form.age) < 1 || parseInt(form.age) > 120) newErrors.age = 'Enter a valid age (1–120)';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validate()) return;
+    setSaving(true);
+    try {
+      const newPatient = await api.addPatient(form);
+      setPatients(prev => [newPatient, ...prev]);
+      handleCloseDialog();
+      setShowSuccess(true);
+    } catch (err) {
+      console.error('Failed to add patient', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Box sx={{ animation: 'fadeIn 0.4s ease-out' }}>
       <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
@@ -67,6 +118,7 @@ const PatientQueue = ({ onSelectPatient }) => {
         <Button
           variant="contained"
           startIcon={<PersonAddIcon />}
+          onClick={handleOpenDialog}
           sx={{
             textTransform: 'none', fontWeight: 700, borderRadius: 2, px: 3,
             background: 'linear-gradient(135deg, #0f172a, #1e3a5f)',
@@ -220,6 +272,141 @@ const PatientQueue = ({ onSelectPatient }) => {
           </Table>
         </TableContainer>
       </Paper>
+
+      {/* Add Patient Dialog */}
+      <Dialog 
+        open={dialogOpen} 
+        onClose={handleCloseDialog} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3, overflow: 'hidden' }
+        }}
+      >
+        <DialogTitle sx={{ 
+          background: 'linear-gradient(135deg, #0f172a, #1e3a5f)', 
+          color: 'white', px: 3, py: 2.5,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <PersonAddIcon />
+            <Box>
+              <Typography variant="h6" fontWeight={700}>Add New Patient</Typography>
+              <Typography variant="caption" sx={{ opacity: 0.7 }}>Fill in patient details to register</Typography>
+            </Box>
+          </Box>
+          <IconButton onClick={handleCloseDialog} sx={{ color: 'white', opacity: 0.7, '&:hover': { opacity: 1 } }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent sx={{ px: 3, pt: 3, pb: 1 }}>
+          <Grid container spacing={2.5} sx={{ mt: 3 }}>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                label="Full Name"
+                placeholder="e.g. John Doe"
+                fullWidth required
+                value={form.name}
+                onChange={(e) => handleFormChange('name', e.target.value)}
+                error={!!errors.name}
+                helperText={errors.name}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              />
+            </Grid>
+
+            <Grid size={{ xs: 6 }}>
+              <TextField
+                label="Age"
+                placeholder="e.g. 35"
+                type="number"
+                fullWidth required
+                value={form.age}
+                onChange={(e) => handleFormChange('age', e.target.value)}
+                error={!!errors.age}
+                helperText={errors.age}
+                inputProps={{ min: 1, max: 120 }}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              />
+            </Grid>
+
+            <Grid size={{ xs: 6 }}>
+              <TextField
+                label="Gender"
+                select fullWidth
+                value={form.gender}
+                onChange={(e) => handleFormChange('gender', e.target.value)}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              >
+                <MenuItem value="">— Select —</MenuItem>
+                <MenuItem value="Male">Male</MenuItem>
+                <MenuItem value="Female">Female</MenuItem>
+                <MenuItem value="Other">Other</MenuItem>
+              </TextField>
+            </Grid>
+
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                label="Phone Number"
+                placeholder="e.g. +94 77 123 4567"
+                fullWidth
+                value={form.phone}
+                onChange={(e) => handleFormChange('phone', e.target.value)}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                label="Clinical Notes"
+                placeholder="Any relevant medical history or notes..."
+                multiline rows={3} fullWidth
+                value={form.notes}
+                onChange={(e) => handleFormChange('notes', e.target.value)}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              />
+            </Grid>
+          </Grid>
+
+          <Paper elevation={0} sx={{ 
+            mt: 2.5, p: 2, borderRadius: 2, 
+            bgcolor: alpha('#00bcd4', 0.04), border: '1px solid', borderColor: alpha('#00bcd4', 0.12)
+          }}>
+            <Typography variant="caption" color="text.secondary">
+              <strong>Note:</strong> The patient will be registered with status <Chip label="Awaiting Analysis" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 600, mx: 0.5 }} /> and AI Risk <Chip label="Pending" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 600, mx: 0.5 }} />. These will update after sample analysis.
+            </Typography>
+          </Paper>
+        </DialogContent>
+
+        <DialogActions sx={{ px: 3, py: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>
+          <Button 
+            onClick={handleCloseDialog} 
+            sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2, color: 'text.secondary' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={saving ? null : <SaveIcon />}
+            onClick={handleSave}
+            disabled={saving}
+            sx={{
+              textTransform: 'none', fontWeight: 700, borderRadius: 2, px: 4,
+              background: 'linear-gradient(135deg, #0f172a, #1e3a5f)',
+              boxShadow: '0 4px 14px rgba(15,23,42,0.25)',
+            }}
+          >
+            {saving ? 'Saving...' : 'Register Patient'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Success Alert */}
+      <Snackbar open={showSuccess} autoHideDuration={4000} onClose={() => setShowSuccess(false)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={() => setShowSuccess(false)} severity="success" variant="filled" icon={<PersonAddIcon />} sx={{ fontWeight: 600, borderRadius: 2, width: '100%' }}>
+          Patient registered successfully and added to the queue.
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

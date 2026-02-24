@@ -8,7 +8,7 @@ const MOCK_USERS = [
   { id: 'pat-1', username: 'pat_user', password: 'password', role: 'PATIENT', name: 'John Doe' },
 ];
 
-const MOCK_PATIENTS = [
+let MOCK_PATIENTS = [
   { id: 'P01', name: 'Kane Peter', age: 24, status: 'Awaiting Analysis', date: '2025-10-20', riskAssessment: 'Pending' },
   { id: 'P02', name: 'Kane Peter', age: 35, status: 'Ready for Review', date: '2025-10-20', riskAssessment: 'High' },
   { id: 'P03', name: 'Kane Peter', age: 44, status: 'Completed', date: '2025-10-20', riskAssessment: 'Normal' },
@@ -50,8 +50,28 @@ export const api = {
   getPatients: async () => {
     return new Promise((resolve) => {
       setTimeout(() => {
-        resolve(MOCK_PATIENTS);
+        resolve([...MOCK_PATIENTS]);
       }, 500);
+    });
+  },
+
+  addPatient: async (patientData) => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const newPatient = {
+          id: `P${String(MOCK_PATIENTS.length + 1).padStart(2, '0')}`,
+          name: patientData.name,
+          age: parseInt(patientData.age),
+          status: 'Awaiting Analysis',
+          date: new Date().toISOString().split('T')[0],
+          riskAssessment: 'Pending',
+          gender: patientData.gender || '',
+          phone: patientData.phone || '',
+          notes: patientData.notes || '',
+        };
+        MOCK_PATIENTS = [newPatient, ...MOCK_PATIENTS];
+        resolve(newPatient);
+      }, 600);
     });
   },
 
