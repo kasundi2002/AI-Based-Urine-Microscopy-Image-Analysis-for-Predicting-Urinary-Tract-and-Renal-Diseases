@@ -1,204 +1,254 @@
 import React, { useState } from 'react';
 import { 
   Box, Typography, Paper, TextField, Button, FormControl, FormLabel, 
-  RadioGroup, FormControlLabel, Radio, Stepper, Step, StepLabel, Chip 
+  RadioGroup, FormControlLabel, Radio, Stepper, Step, StepLabel, StepConnector, Chip, Grid
 } from '@mui/material';
+import { alpha, styled } from '@mui/material/styles';
 import ScienceIcon from '@mui/icons-material/Science';
+import PersonIcon from '@mui/icons-material/Person';
+import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
+import RestaurantIcon from '@mui/icons-material/Restaurant';
+import WaterDropIcon from '@mui/icons-material/WaterDrop';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import SendIcon from '@mui/icons-material/Send';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 const steps = ['Basic Info', 'Symptoms', 'Lifestyle', 'Urinary Health'];
+const stepIcons = [<PersonIcon />, <MonitorHeartIcon />, <RestaurantIcon />, <WaterDropIcon />];
+
+const CustomStepIcon = ({ active, completed, icon }) => {
+  const idx = parseInt(icon) - 1;
+  return (
+    <Box sx={{
+      width: 38, height: 38, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: completed ? 'linear-gradient(135deg, #66bb6a, #2e7d32)' : active ? 'linear-gradient(135deg, #0f172a, #1e3a5f)' : alpha('#9e9e9e', 0.1),
+      color: completed || active ? 'white' : '#9e9e9e',
+      transition: 'all 0.3s',
+      boxShadow: active ? '0 4px 14px rgba(15,23,42,0.3)' : 'none',
+    }}>
+      {completed ? <CheckCircleIcon sx={{ fontSize: 18 }} /> : React.cloneElement(stepIcons[idx], { sx: { fontSize: 18 } })}
+    </Box>
+  );
+};
 
 const Questionnaire = ({ onComplete }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [formData, setFormData] = useState({
-    age: '',
-    gender: 'male',
-    painLevel: '0',
-    hydration: 'adequate',
-    history: 'no',
-    diet: 'normal',
-    medication: 'no',
-    urinaryFrequency: 'normal',
-    bloodInUrine: 'no',
-    burning: 'no',
+    age: '', gender: 'male', painLevel: '0', hydration: 'adequate',
+    history: 'no', diet: 'normal', medication: 'no',
+    urinaryFrequency: 'normal', bloodInUrine: 'no', burning: 'no',
   });
 
   const handleNext = () => {
-    if (activeStep === steps.length - 1) {
-      onComplete(formData);
-    } else {
-      setActiveStep((prev) => prev + 1);
-    }
+    if (activeStep === steps.length - 1) { onComplete(formData); } 
+    else { setActiveStep(prev => prev + 1); }
   };
+  const handleBack = () => setActiveStep(prev => prev - 1);
+  const handleChange = (field) => (e) => setFormData({ ...formData, [field]: e.target.value });
 
-  const handleBack = () => {
-    setActiveStep((prev) => prev - 1);
-  };
-
-  const handleChange = (field) => (e) => {
-    setFormData({ ...formData, [field]: e.target.value });
-  };
+  const RadioCard = ({ value, label, currentValue, onChange }) => (
+    <Paper
+      elevation={0}
+      onClick={() => onChange({ target: { value } })}
+      sx={{
+        p: 2, borderRadius: 2.5, cursor: 'pointer', textAlign: 'center',
+        border: '2px solid', borderColor: currentValue === value ? '#00bcd4' : 'divider',
+        bgcolor: currentValue === value ? alpha('#00bcd4', 0.04) : 'transparent',
+        transition: 'all 0.2s',
+        '&:hover': { borderColor: alpha('#00bcd4', 0.5) }
+      }}
+    >
+      <Radio checked={currentValue === value} size="small" sx={{ p: 0, mb: 0.5, color: currentValue === value ? '#00bcd4' : 'text.disabled' }} />
+      <Typography variant="body2" fontWeight={currentValue === value ? 700 : 500} sx={{ color: currentValue === value ? '#00bcd4' : 'text.primary' }}>
+        {label}
+      </Typography>
+    </Paper>
+  );
 
   const getStepContent = (step) => {
     switch (step) {
       case 0:
         return (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">Personal Details</Typography>
+          <Box>
+            <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>Personal Details</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              This information helps calibrate the risk prediction model for your demographic.
+              This helps calibrate the risk prediction model for your demographic.
             </Typography>
             <TextField
-              fullWidth
-              label="Age"
-              type="number"
-              variant="outlined"
-              value={formData.age}
-              onChange={handleChange('age')}
-              margin="normal"
+              fullWidth label="Age" type="number" variant="outlined"
+              value={formData.age} onChange={handleChange('age')}
+              sx={{ mb: 3, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
-            <FormControl component="fieldset" margin="normal" sx={{ mt: 3, display: 'block' }}>
-              <FormLabel component="legend" sx={{ mb: 1, color: 'text.primary', fontWeight: 600 }}>Gender</FormLabel>
-              <RadioGroup row value={formData.gender} onChange={handleChange('gender')}>
-                <FormControlLabel value="male" control={<Radio color="primary" />} label="Male" sx={{ mr: 4 }} />
-                <FormControlLabel value="female" control={<Radio color="primary" />} label="Female" />
-              </RadioGroup>
-            </FormControl>
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
+              Gender
+            </Typography>
+            <Grid container spacing={1.5}>
+              <Grid size={{ xs: 6 }}><RadioCard value="male" label="Male" currentValue={formData.gender} onChange={handleChange('gender')} /></Grid>
+              <Grid size={{ xs: 6 }}><RadioCard value="female" label="Female" currentValue={formData.gender} onChange={handleChange('gender')} /></Grid>
+            </Grid>
           </Box>
         );
       case 1:
         return (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">Symptoms Assessment</Typography>
+          <Box>
+            <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>Symptoms Assessment</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               Current symptoms significantly impact the risk calculation.
             </Typography>
-            <Typography gutterBottom color="text.primary" fontWeight={600} sx={{ mt: 2 }}>Current Pain Level (0 = No Pain, 10 = Severe)</Typography>
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1, display: 'block' }}>
+              Current Pain Level (0–10)
+            </Typography>
             <TextField
-              fullWidth
-              type="number"
-              variant="outlined"
-              inputProps={{ min: 0, max: 10 }}
-              value={formData.painLevel}
-              onChange={handleChange('painLevel')}
-              margin="normal"
+              fullWidth type="number" inputProps={{ min: 0, max: 10 }}
+              value={formData.painLevel} onChange={handleChange('painLevel')}
+              sx={{ mb: 3, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
-            <FormControl component="fieldset" margin="normal" sx={{ mt: 3, display: 'block' }}>
-              <FormLabel component="legend" sx={{ mb: 1, color: 'text.primary', fontWeight: 600 }}>Family History of Kidney Stones / UTI?</FormLabel>
-              <RadioGroup row value={formData.history} onChange={handleChange('history')}>
-                <FormControlLabel value="yes" control={<Radio color="primary" />} label="Yes" sx={{ mr: 4 }} />
-                <FormControlLabel value="no" control={<Radio color="primary" />} label="No" />
-              </RadioGroup>
-            </FormControl>
-            <FormControl component="fieldset" margin="normal" sx={{ mt: 2, display: 'block' }}>
-              <FormLabel component="legend" sx={{ mb: 1, color: 'text.primary', fontWeight: 600 }}>Are you currently on any medication?</FormLabel>
-              <RadioGroup row value={formData.medication} onChange={handleChange('medication')}>
-                <FormControlLabel value="yes" control={<Radio color="primary" />} label="Yes" sx={{ mr: 4 }} />
-                <FormControlLabel value="no" control={<Radio color="primary" />} label="No" />
-              </RadioGroup>
-            </FormControl>
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
+              Family History of Kidney Stones / UTI?
+            </Typography>
+            <Grid container spacing={1.5} sx={{ mb: 3 }}>
+              <Grid size={{ xs: 6 }}><RadioCard value="yes" label="Yes" currentValue={formData.history} onChange={handleChange('history')} /></Grid>
+              <Grid size={{ xs: 6 }}><RadioCard value="no" label="No" currentValue={formData.history} onChange={handleChange('history')} /></Grid>
+            </Grid>
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
+              Currently on medication?
+            </Typography>
+            <Grid container spacing={1.5}>
+              <Grid size={{ xs: 6 }}><RadioCard value="yes" label="Yes" currentValue={formData.medication} onChange={handleChange('medication')} /></Grid>
+              <Grid size={{ xs: 6 }}><RadioCard value="no" label="No" currentValue={formData.medication} onChange={handleChange('medication')} /></Grid>
+            </Grid>
           </Box>
         );
       case 2:
         return (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">Lifestyle & Habits</Typography>
+          <Box>
+            <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>Lifestyle & Habits</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               Lifestyle factors play a significant role in urinary tract health.
             </Typography>
-             <FormControl component="fieldset" margin="normal" sx={{ mt: 1, display: 'block' }}>
-              <FormLabel component="legend" sx={{ mb: 1, color: 'text.primary', fontWeight: 600 }}>Daily Water Intake</FormLabel>
-              <Paper variant="outlined" sx={{ p: 2, bgcolor: 'transparent' }}>
-                  <RadioGroup value={formData.hydration} onChange={handleChange('hydration')}>
-                    <FormControlLabel value="low" control={<Radio color="primary" />} label="Low (< 1L)" sx={{ mb: 1 }} />
-                    <FormControlLabel value="adequate" control={<Radio color="primary" />} label="Adequate (1-2L)" sx={{ mb: 1 }} />
-                    <FormControlLabel value="high" control={<Radio color="primary" />} label="High (> 2L)" />
-                  </RadioGroup>
-              </Paper>
-            </FormControl>
-            <FormControl component="fieldset" margin="normal" sx={{ mt: 3, display: 'block' }}>
-              <FormLabel component="legend" sx={{ mb: 1, color: 'text.primary', fontWeight: 600 }}>Dietary Habits</FormLabel>
-              <Paper variant="outlined" sx={{ p: 2, bgcolor: 'transparent' }}>
-                  <RadioGroup value={formData.diet} onChange={handleChange('diet')}>
-                    <FormControlLabel value="normal" control={<Radio color="primary" />} label="Normal / Balanced diet" sx={{ mb: 1 }} />
-                    <FormControlLabel value="high_salt" control={<Radio color="primary" />} label="High salt intake" sx={{ mb: 1 }} />
-                    <FormControlLabel value="high_oxalate" control={<Radio color="primary" />} label="High oxalate foods (spinach, nuts, chocolate)" sx={{ mb: 1 }} />
-                    <FormControlLabel value="high_protein" control={<Radio color="primary" />} label="High protein diet" />
-                  </RadioGroup>
-              </Paper>
-            </FormControl>
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
+              Daily Water Intake
+            </Typography>
+            <Grid container spacing={1.5} sx={{ mb: 3 }}>
+              <Grid size={{ xs: 4 }}><RadioCard value="low" label="Low (< 1L)" currentValue={formData.hydration} onChange={handleChange('hydration')} /></Grid>
+              <Grid size={{ xs: 4 }}><RadioCard value="adequate" label="Adequate (1-2L)" currentValue={formData.hydration} onChange={handleChange('hydration')} /></Grid>
+              <Grid size={{ xs: 4 }}><RadioCard value="high" label="High (> 2L)" currentValue={formData.hydration} onChange={handleChange('hydration')} /></Grid>
+            </Grid>
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
+              Dietary Habits
+            </Typography>
+            <Grid container spacing={1.5}>
+              <Grid size={{ xs: 6 }}><RadioCard value="normal" label="Balanced diet" currentValue={formData.diet} onChange={handleChange('diet')} /></Grid>
+              <Grid size={{ xs: 6 }}><RadioCard value="high_salt" label="High salt intake" currentValue={formData.diet} onChange={handleChange('diet')} /></Grid>
+              <Grid size={{ xs: 6 }}><RadioCard value="high_oxalate" label="High oxalate foods" currentValue={formData.diet} onChange={handleChange('diet')} /></Grid>
+              <Grid size={{ xs: 6 }}><RadioCard value="high_protein" label="High protein diet" currentValue={formData.diet} onChange={handleChange('diet')} /></Grid>
+            </Grid>
           </Box>
         );
       case 3:
         return (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">Urinary Health</Typography>
+          <Box>
+            <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>Urinary Health</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               These symptoms are directly correlated with urinary tract and renal conditions.
             </Typography>
-            <FormControl component="fieldset" margin="normal" sx={{ mt: 1, display: 'block' }}>
-              <FormLabel component="legend" sx={{ mb: 1, color: 'text.primary', fontWeight: 600 }}>Urinary Frequency</FormLabel>
-              <RadioGroup row value={formData.urinaryFrequency} onChange={handleChange('urinaryFrequency')}>
-                <FormControlLabel value="normal" control={<Radio color="primary" />} label="Normal" sx={{ mr: 3 }} />
-                <FormControlLabel value="frequent" control={<Radio color="primary" />} label="Frequent" sx={{ mr: 3 }} />
-                <FormControlLabel value="reduced" control={<Radio color="primary" />} label="Reduced" />
-              </RadioGroup>
-            </FormControl>
-            <FormControl component="fieldset" margin="normal" sx={{ mt: 3, display: 'block' }}>
-              <FormLabel component="legend" sx={{ mb: 1, color: 'text.primary', fontWeight: 600 }}>Have you noticed blood in your urine?</FormLabel>
-              <RadioGroup row value={formData.bloodInUrine} onChange={handleChange('bloodInUrine')}>
-                <FormControlLabel value="yes" control={<Radio color="primary" />} label="Yes" sx={{ mr: 4 }} />
-                <FormControlLabel value="no" control={<Radio color="primary" />} label="No" />
-              </RadioGroup>
-            </FormControl>
-            <FormControl component="fieldset" margin="normal" sx={{ mt: 3, display: 'block' }}>
-              <FormLabel component="legend" sx={{ mb: 1, color: 'text.primary', fontWeight: 600 }}>Do you experience a burning sensation during urination?</FormLabel>
-              <RadioGroup row value={formData.burning} onChange={handleChange('burning')}>
-                <FormControlLabel value="yes" control={<Radio color="primary" />} label="Yes" sx={{ mr: 4 }} />
-                <FormControlLabel value="no" control={<Radio color="primary" />} label="No" />
-              </RadioGroup>
-            </FormControl>
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
+              Urinary Frequency
+            </Typography>
+            <Grid container spacing={1.5} sx={{ mb: 3 }}>
+              <Grid size={{ xs: 4 }}><RadioCard value="normal" label="Normal" currentValue={formData.urinaryFrequency} onChange={handleChange('urinaryFrequency')} /></Grid>
+              <Grid size={{ xs: 4 }}><RadioCard value="frequent" label="Frequent" currentValue={formData.urinaryFrequency} onChange={handleChange('urinaryFrequency')} /></Grid>
+              <Grid size={{ xs: 4 }}><RadioCard value="reduced" label="Reduced" currentValue={formData.urinaryFrequency} onChange={handleChange('urinaryFrequency')} /></Grid>
+            </Grid>
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
+              Blood in urine?
+            </Typography>
+            <Grid container spacing={1.5} sx={{ mb: 3 }}>
+              <Grid size={{ xs: 6 }}><RadioCard value="yes" label="Yes" currentValue={formData.bloodInUrine} onChange={handleChange('bloodInUrine')} /></Grid>
+              <Grid size={{ xs: 6 }}><RadioCard value="no" label="No" currentValue={formData.bloodInUrine} onChange={handleChange('bloodInUrine')} /></Grid>
+            </Grid>
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
+              Burning sensation during urination?
+            </Typography>
+            <Grid container spacing={1.5}>
+              <Grid size={{ xs: 6 }}><RadioCard value="yes" label="Yes" currentValue={formData.burning} onChange={handleChange('burning')} /></Grid>
+              <Grid size={{ xs: 6 }}><RadioCard value="no" label="No" currentValue={formData.burning} onChange={handleChange('burning')} /></Grid>
+            </Grid>
           </Box>
         );
-      default:
-        return 'Unknown step';
+      default: return null;
     }
   };
 
   return (
-    <Paper sx={{ p: 5, maxWidth: 700, mx: 'auto', borderRadius: 4 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
-        <ScienceIcon sx={{ color: 'primary.main', mr: 1, fontSize: 28 }} />
-        <Typography variant="h5" fontWeight="bold">
-            Health Questionnaire
+    <Paper elevation={0} sx={{ maxWidth: 700, mx: 'auto', borderRadius: 3, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
+      {/* Header */}
+      <Box sx={{ 
+        px: 4, py: 3, textAlign: 'center',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)', color: 'white'
+      }}>
+        <Box sx={{ display: 'inline-flex', p: 1.5, bgcolor: alpha('#fff', 0.1), borderRadius: '50%', mb: 1.5 }}>
+          <ScienceIcon sx={{ fontSize: 28 }} />
+        </Box>
+        <Typography variant="h5" fontWeight={800}>Health Questionnaire</Typography>
+        <Typography variant="body2" sx={{ opacity: 0.7, mt: 0.5, maxWidth: 400, mx: 'auto' }}>
+          Your responses will be combined with lab analysis to generate an enhanced AI risk prediction.
         </Typography>
       </Box>
-      <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 4 }}>
-        Your responses will be combined with lab sediment analysis to generate an enhanced AI risk prediction.
-      </Typography>
-      
-      <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 5 }}>
-        {steps.map((label) => (
-          <Step key={label}>
-            <StepLabel>{label}</StepLabel>
-          </Step>
-        ))}
-      </Stepper>
-      
-      <Box sx={{ minHeight: 300 }}>
+
+      {/* Stepper */}
+      <Box sx={{ px: 4, py: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Stepper activeStep={activeStep} alternativeLabel
+          connector={<StepConnector sx={{ '& .MuiStepConnector-line': { borderColor: alpha('#00bcd4', 0.15), borderTopWidth: 2 } }} />}
+        >
+          {steps.map((label, idx) => (
+            <Step key={label} completed={activeStep > idx}>
+              <StepLabel StepIconComponent={CustomStepIcon}>
+                <Typography variant="caption" fontWeight={activeStep >= idx ? 700 : 500} color={activeStep >= idx ? 'text.primary' : 'text.secondary'}>
+                  {label}
+                </Typography>
+              </StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+      </Box>
+
+      {/* Content */}
+      <Box sx={{ px: 4, py: 3, minHeight: 320 }}>
         {getStepContent(activeStep)}
       </Box>
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
-        <Typography variant="body2" color="text.secondary">
-          Step {activeStep + 1} of {steps.length}
-        </Typography>
-        <Box>
+      {/* Footer */}
+      <Box sx={{ 
+        px: 4, py: 2.5, borderTop: '1px solid', borderColor: 'divider',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+      }}>
+        <Chip 
+          label={`Step ${activeStep + 1} of ${steps.length}`} 
+          size="small"
+          sx={{ fontWeight: 600, fontSize: '0.7rem', bgcolor: alpha('#00bcd4', 0.06), color: '#00bcd4', height: 24 }}
+        />
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
           {activeStep !== 0 && (
-            <Button onClick={handleBack} sx={{ mr: 2, px: 3 }}>
+            <Button 
+              startIcon={<ArrowBackIcon />}
+              onClick={handleBack} 
+              sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2, color: 'text.secondary' }}
+            >
               Back
             </Button>
           )}
-          <Button variant="contained" size="large" onClick={handleNext} sx={{ px: 4 }}>
+          <Button 
+            variant="contained" 
+            endIcon={activeStep === steps.length - 1 ? <SendIcon /> : <ArrowForwardIcon />}
+            onClick={handleNext}
+            sx={{ 
+              textTransform: 'none', fontWeight: 700, borderRadius: 2, px: 4,
+              background: 'linear-gradient(135deg, #0f172a, #1e3a5f)',
+              boxShadow: '0 4px 14px rgba(15,23,42,0.25)',
+            }}
+          >
             {activeStep === steps.length - 1 ? 'Submit & Get Prediction' : 'Next Step'}
           </Button>
         </Box>
