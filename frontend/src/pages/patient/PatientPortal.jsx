@@ -198,7 +198,7 @@ const PatientPortal = () => {
             </Paper>
           )}
 
-          <ResultsDashboard report={displayReport} />
+          <ResultsDashboard report={displayReport} patientName={user?.name || 'John Doe'} />
         </React.Fragment>
       )}
 

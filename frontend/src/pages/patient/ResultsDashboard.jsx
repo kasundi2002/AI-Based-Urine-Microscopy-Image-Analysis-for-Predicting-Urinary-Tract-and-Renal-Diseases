@@ -16,8 +16,9 @@ import RestaurantIcon from '@mui/icons-material/Restaurant';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import BiomedicalServicesIcon from '@mui/icons-material/MedicalServices';
 import { XAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import generateReport from '../../utils/generateReport';
 
-const ResultsDashboard = ({ report }) => {
+const ResultsDashboard = ({ report, patientName }) => {
   if (!report) return (
     <Paper elevation={0} sx={{ p: 6, textAlign: 'center', borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
       <Typography color="text.secondary" fontWeight={500}>No recent reports found. Please check back later.</Typography>
@@ -82,6 +83,7 @@ const ResultsDashboard = ({ report }) => {
         <Button 
           variant="outlined" 
           startIcon={<DownloadIcon />}
+          onClick={() => generateReport(report, patientName)}
           sx={{ 
             textTransform: 'none', fontWeight: 600, borderRadius: 2, 
             borderColor: 'divider', color: 'text.secondary',
