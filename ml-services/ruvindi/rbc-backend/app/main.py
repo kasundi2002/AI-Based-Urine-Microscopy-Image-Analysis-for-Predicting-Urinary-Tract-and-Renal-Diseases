@@ -106,3 +106,14 @@ def submit_questionnaire(data: QuestionnaireAnswers):
         "patient_answers": latest_answers,
         "final_report": final_report
     }
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(
+        "app.main:app",
+        host="127.0.0.1",
+        port=8000,
+        reload=True,
+    )
