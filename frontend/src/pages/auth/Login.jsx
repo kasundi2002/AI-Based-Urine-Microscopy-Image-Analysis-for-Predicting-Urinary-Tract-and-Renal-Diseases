@@ -30,18 +30,17 @@ const Login = () => {
     setLoading(true);
     setError('');
     try {
-      const user = await api.login(username, password);
-      if (user.role !== role) {
-        const demoUser = {
-          'MLT': { username: 'mlt_user', password: 'password' },
-          'CLINICIAN': { username: 'doc_user', password: 'password' },
-          'PATIENT': { username: 'pat_user', password: 'password' }
-        }[role];
-        const realUser = await api.login(demoUser.username, demoUser.password);
-        login(realUser);
-      } else {
-        login(user);
+      const response = await api.login(username, password);
+      // Backend response: { success: true, token: '...', user: { ... } }
+      const authenticatedUser = response.user;
+      const jwtToken = response.token;
+
+      if (authenticatedUser.role !== role) {
+        setError(`This account is not authorized for the ${role} portal.`);
+        return;
       }
+
+      login(authenticatedUser, jwtToken);
       if (role === 'MLT') navigate('/mlt-dashboard');
       else if (role === 'CLINICIAN') navigate('/clinician-dashboard');
       else if (role === 'PATIENT') navigate('/patient-portal');

@@ -9,13 +9,13 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import SpeedIcon from '@mui/icons-material/Speed';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import { useLabData } from '../../context/LabDataContext';
-
-const PATIENT_ID = 'PAT-2023-001';
+import { useAuth } from '../../context/AuthContext';
 
 const HistoryView = ({ onViewDetails }) => {
+  const { user } = useAuth();
   const { getPatientResults } = useLabData();
-  const labResults = getPatientResults(PATIENT_ID);
+  const displayPatientId = user?.patientId || 'N/A';
+  const labResults = getPatientResults(displayPatientId);
 
   const mockHistory = [
     { id: 'mock-1', date: 'Oct 26, 2023', risk: 'Low', score: 20, status: 'Reviewed', wbc: '0-2', rbc: '0-1', crystals: 'None', bacteria: 'None', prescription: 'Maintain hydration.', doctorNote: 'Good progress.' },

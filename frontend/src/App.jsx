@@ -5,9 +5,12 @@ import Login from './pages/auth/Login';
 import MLTDashboard from './pages/mlt/MLTDashboard';
 import ClinicianDashboard from './pages/clinician/ClinicianDashboard';
 import PatientPortal from './pages/patient/PatientPortal';
+import PatientVerification from './pages/patient/PatientVerification';
+import PatientOTP from './pages/patient/PatientOTP';
 import UserProfile from './pages/shared/UserProfile';
 import Layout from './components/Layout';
 
+// Staff route guard (MLT / Clinician)
 const PrivateRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
   
@@ -18,7 +21,20 @@ const PrivateRoute = ({ children, allowedRoles }) => {
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/" />; // Or unauthorized page
+    return <Navigate to="/" />;
+  }
+
+  return children;
+};
+
+// Patient route guard — requires patient OTP JWT
+const PatientPrivateRoute = ({ children }) => {
+  const { isPatientAuthenticated, loading } = useAuth();
+
+  if (loading) return <div>Loading...</div>;
+
+  if (!isPatientAuthenticated) {
+    return <Navigate to="/login" />;
   }
 
   return children;
@@ -28,6 +44,10 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+
+      {/* Public patient verification flow (full-screen, no layout) */}
+      <Route path="/patient-verify" element={<PatientVerification />} />
+      <Route path="/patient-otp" element={<PatientOTP />} />
       
       <Route path="/" element={<Layout />}>
         <Route index element={<Navigate to="/login" />} />
@@ -53,9 +73,9 @@ function App() {
         <Route 
           path="patient-portal" 
           element={
-            <PrivateRoute allowedRoles={['PATIENT']}>
+            <PatientPrivateRoute>
               <PatientPortal />
-            </PrivateRoute>
+            </PatientPrivateRoute>
           } 
         />
         
@@ -73,3 +93,4 @@ function App() {
 }
 
 export default App;
+

@@ -18,7 +18,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import SaveIcon from '@mui/icons-material/Save';
 import { api } from '../../services/api';
 
-const emptyForm = { name: '', age: '', gender: '', phone: '', notes: '' };
+const emptyForm = { name: '', age: '', gender: '', email: '', mobile: '', notes: '' };
+
 
 const PatientQueue = ({ onSelectPatient }) => {
   const [patients, setPatients] = useState([]);
@@ -27,7 +28,9 @@ const PatientQueue = ({ onSelectPatient }) => {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showEmailSent, setShowEmailSent] = useState(false);
   const [errors, setErrors] = useState({});
+
 
   useEffect(() => {
     const fetchPatients = async () => {
@@ -56,7 +59,7 @@ const PatientQueue = ({ onSelectPatient }) => {
   };
 
   const filtered = patients.filter(p => 
-    !search || p.name?.toLowerCase().includes(search.toLowerCase()) || p.id?.toLowerCase().includes(search.toLowerCase())
+    !search || p.name?.toLowerCase().includes(search.toLowerCase()) || p.patientId?.toLowerCase().includes(search.toLowerCase())
   );
 
   const handleOpenDialog = () => {
@@ -81,6 +84,9 @@ const PatientQueue = ({ onSelectPatient }) => {
     if (!form.name.trim()) newErrors.name = 'Patient name is required';
     if (!form.age) newErrors.age = 'Age is required';
     else if (isNaN(form.age) || parseInt(form.age) < 1 || parseInt(form.age) > 120) newErrors.age = 'Enter a valid age (1–120)';
+    if (!form.email.trim()) newErrors.email = 'Email address is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) newErrors.email = 'Enter a valid email address';
+    if (!form.mobile.trim()) newErrors.mobile = 'Mobile number is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -93,12 +99,25 @@ const PatientQueue = ({ onSelectPatient }) => {
       setPatients(prev => [newPatient, ...prev]);
       handleCloseDialog();
       setShowSuccess(true);
+      // Try to send the secure access email (best-effort)
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:5000/api/patient-access/send-link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ patientId: newPatient.patientId }),
+        });
+        if (response.ok) setShowEmailSent(true);
+      } catch (linkErr) {
+        console.warn('Could not send patient access email:', linkErr.message);
+      }
     } catch (err) {
       console.error('Failed to add patient', err);
     } finally {
       setSaving(false);
     }
   };
+
 
   return (
     <Box sx={{ animation: 'fadeIn 0.4s ease-out' }}>
@@ -163,7 +182,8 @@ const PatientQueue = ({ onSelectPatient }) => {
           <Table>
             <TableHead>
               <TableRow sx={{ bgcolor: alpha('#f8fafc', 0.5) }}>
-                <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.75rem', letterSpacing: 0.5, textTransform: 'uppercase', py: 2 }}>Patient</TableCell>
+                <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.75rem', letterSpacing: 0.5, textTransform: 'uppercase', py: 2 }}>ID</TableCell>
+                <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.75rem', letterSpacing: 0.5, textTransform: 'uppercase' }}>Patient</TableCell>
                 <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.75rem', letterSpacing: 0.5, textTransform: 'uppercase' }}>Age</TableCell>
                 <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.75rem', letterSpacing: 0.5, textTransform: 'uppercase' }}>Date</TableCell>
                 <TableCell sx={{ fontWeight: 700, color: 'text.secondary', fontSize: '0.75rem', letterSpacing: 0.5, textTransform: 'uppercase' }}>AI Risk</TableCell>
@@ -177,13 +197,16 @@ const PatientQueue = ({ onSelectPatient }) => {
                 const status = getStatusConfig(patient.status);
                 return (
                   <TableRow 
-                    hover key={patient.id} 
+                    hover key={patient._id} 
                     sx={{ 
                       transition: 'all 0.15s',
                       '&:hover': { bgcolor: alpha('#00bcd4', 0.02) },
                       '&:last-child td': { border: 0 }
                     }}
                   >
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={700} color="#00bcd4">{patient.patientId}</Typography>
+                    </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         <Avatar sx={{ 
@@ -194,7 +217,6 @@ const PatientQueue = ({ onSelectPatient }) => {
                         </Avatar>
                         <Box>
                           <Typography variant="body2" fontWeight={600}>{patient.name}</Typography>
-                          <Typography variant="caption" color="text.secondary">{patient.id}</Typography>
                         </Box>
                       </Box>
                     </TableCell>
@@ -202,7 +224,9 @@ const PatientQueue = ({ onSelectPatient }) => {
                       <Typography variant="body2" fontWeight={500}>{patient.age}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" color="text.secondary">{patient.date}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {patient.createdAt ? new Date(patient.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                      </Typography>
                     </TableCell>
                     <TableCell>
                       <Chip 
@@ -347,11 +371,27 @@ const PatientQueue = ({ onSelectPatient }) => {
 
             <Grid size={{ xs: 12 }}>
               <TextField
-                label="Phone Number"
+                label="Email Address"
+                placeholder="e.g. patient@email.com"
+                type="email"
+                fullWidth required
+                value={form.email}
+                onChange={(e) => handleFormChange('email', e.target.value)}
+                error={!!errors.email}
+                helperText={errors.email}
+                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                label="Mobile Number"
                 placeholder="e.g. +94 77 123 4567"
-                fullWidth
-                value={form.phone}
-                onChange={(e) => handleFormChange('phone', e.target.value)}
+                fullWidth required
+                value={form.mobile}
+                onChange={(e) => handleFormChange('mobile', e.target.value)}
+                error={!!errors.mobile}
+                helperText={errors.mobile || 'OTP will be sent to this number for patient identity verification'}
                 sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
               />
             </Grid>
@@ -373,7 +413,7 @@ const PatientQueue = ({ onSelectPatient }) => {
             bgcolor: alpha('#00bcd4', 0.04), border: '1px solid', borderColor: alpha('#00bcd4', 0.12)
           }}>
             <Typography variant="caption" color="text.secondary">
-              <strong>Note:</strong> The patient will be registered with status <Chip label="Awaiting Analysis" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 600, mx: 0.5 }} /> and AI Risk <Chip label="Pending" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 600, mx: 0.5 }} />. These will update after sample analysis.
+              <strong>Note:</strong> The patient will be registered with status <Chip label="Awaiting Analysis" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 600, mx: 0.5 }} /> and AI Risk <Chip label="Pending" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 600, mx: 0.5 }} />. A secure access link will be sent to the patient's email after registration.
             </Typography>
           </Paper>
         </DialogContent>
@@ -407,8 +447,16 @@ const PatientQueue = ({ onSelectPatient }) => {
           Patient registered successfully and added to the queue.
         </Alert>
       </Snackbar>
+
+      {/* Email Sent Alert */}
+      <Snackbar open={showEmailSent} autoHideDuration={6000} onClose={() => setShowEmailSent(false)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} sx={{ bottom: 72 }}>
+        <Alert onClose={() => setShowEmailSent(false)} severity="info" variant="filled" sx={{ fontWeight: 600, borderRadius: 2, width: '100%' }}>
+          Secure access link sent to patient's email address.
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
 
 export default PatientQueue;
+

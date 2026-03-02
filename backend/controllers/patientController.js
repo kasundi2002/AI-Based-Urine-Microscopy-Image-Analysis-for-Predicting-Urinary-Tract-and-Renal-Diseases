@@ -40,7 +40,17 @@ export const getPatient = async (req, res, next) => {
 // @access  Private (MLT)
 export const createPatient = async (req, res, next) => {
     try {
-        const patient = await Patient.create(req.body);
+        // Generate a new patientId like "P01", "P02", etc.
+        const count = await Patient.countDocuments();
+        const paddedCount = String(count + 1).padStart(2, '0');
+        const patientIdStr = `P${paddedCount}`;
+
+        const patientData = {
+            ...req.body,
+            patientId: patientIdStr
+        };
+
+        const patient = await Patient.create(patientData);
 
         res.status(201).json({
             success: true,

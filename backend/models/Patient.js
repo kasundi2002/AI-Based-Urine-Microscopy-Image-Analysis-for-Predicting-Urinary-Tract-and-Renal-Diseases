@@ -28,6 +28,29 @@ const patientSchema = new mongoose.Schema({
         enum: ['Normal', 'Pending', 'High', 'Low', 'Critical'],
         default: 'Pending'
     },
+    email: {
+        type: String,
+        trim: true,
+        lowercase: true
+    },
+    mobile: {
+        type: String,
+        trim: true
+    },
+    // Secure email link fields
+    accessToken: {
+        type: String
+    },
+    accessTokenExpiry: {
+        type: Date
+    },
+    // OTP fields
+    otp: {
+        type: String
+    },
+    otpExpiry: {
+        type: Date
+    },
     dateAssigned: {
         type: Date,
         default: Date.now

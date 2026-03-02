@@ -145,7 +145,7 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
     }
   };
 
-  const getOptionLabel = (option) => option ? `${option.name} (ID: ${option.id})` : '';
+  const getOptionLabel = (option) => option ? `${option.name} (ID: ${option.patientId})` : '';
 
   const activeStep = analysisResult ? 2 : selectedPatient ? 1 : 0;
 
@@ -248,7 +248,7 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
                     </Avatar>
                     <Box>
                       <Typography variant="subtitle2" fontWeight={700}>{selectedPatient.name}</Typography>
-                      <Typography variant="caption" color="text.secondary">ID: {selectedPatient.id}</Typography>
+                      <Typography variant="caption" color="text.secondary">ID: {selectedPatient.patientId}</Typography>
                     </Box>
                   </Box>
                   <Divider sx={{ my: 1.5 }} />

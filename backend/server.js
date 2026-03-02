@@ -16,6 +16,7 @@ import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import patientRoutes from './routes/patientRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
+import patientAccessRoutes from './routes/patientAccessRoutes.js';
 
 // Middleware
 import errorHandler from './middleware/errorMiddleware.js';
@@ -73,6 +74,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/patient-access', patientAccessRoutes);
 
 app.get('/', (req, res) => {
     res.json({ message: 'Welcome to the AI Diagnostics Platform Backend' });

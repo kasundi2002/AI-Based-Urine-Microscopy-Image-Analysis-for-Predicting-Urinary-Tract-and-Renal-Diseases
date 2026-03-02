@@ -8,104 +8,84 @@ const MOCK_USERS = [
   { id: 'pat-1', username: 'pat_user', password: 'password', role: 'PATIENT', name: 'John Doe' },
 ];
 
-let MOCK_PATIENTS = [
-  { id: 'P01', name: 'Kane Peter', age: 24, status: 'Awaiting Analysis', date: '2025-10-20', riskAssessment: 'Pending' },
-  { id: 'P02', name: 'Kane Peter', age: 35, status: 'Ready for Review', date: '2025-10-20', riskAssessment: 'High' },
-  { id: 'P03', name: 'Kane Peter', age: 44, status: 'Completed', date: '2025-10-20', riskAssessment: 'Normal' },
-  { id: 'P04', name: 'Kane Peter', age: 18, status: 'Completed', date: '2025-10-20', riskAssessment: 'Normal' },
-];
+const BACKEND_URL = 'http://localhost:5000/api';
 
-const MOCK_REPORTS = [
-  {
-    id: 'r1',
-    patientId: 'p2',
-    patientName: 'Bob Williams',
-    image: microscopyImage,
-    findings: {
-      wbc: 12,
-      rbc: 5,
-      crystals: 'Calcium Oxalate',
-      bacteria: 'None',
-    },
-    riskScore: 85,
-    riskLabel: 'High Risk of Kidney Stones',
-    status: 'Pending Verification',
-  },
-];
+const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+};
 
 export const api = {
   login: async (username, password) => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const user = MOCK_USERS.find(u => u.username === username && u.password === password);
-        if (user) {
-          resolve(user);
-        } else {
-          reject(new Error('Invalid credentials'));
-        }
-      }, 500);
-    });
+      const response = await fetch(`${BACKEND_URL}/auth/login`, {
+          method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Login failed');
+      return data;
   },
 
   getPatients: async () => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve([...MOCK_PATIENTS]);
-      }, 500);
-    });
+      const response = await fetch(`${BACKEND_URL}/patients`, {
+          headers: getAuthHeaders()
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to fetch patients');
+      return data.data; // Assuming your API returns { success: true, count: X, data: [...] }
   },
 
   addPatient: async (patientData) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const newPatient = {
-          id: `P${String(MOCK_PATIENTS.length + 1).padStart(2, '0')}`,
-          name: patientData.name,
-          age: parseInt(patientData.age),
-          status: 'Awaiting Analysis',
-          date: new Date().toISOString().split('T')[0],
-          riskAssessment: 'Pending',
-          gender: patientData.gender || '',
-          phone: patientData.phone || '',
-          notes: patientData.notes || '',
-        };
-        MOCK_PATIENTS = [newPatient, ...MOCK_PATIENTS];
-        resolve(newPatient);
-      }, 600);
-    });
+      const response = await fetch(`${BACKEND_URL}/patients`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(patientData)
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to add patient');
+      return data.data; // return created patient
   },
 
   uploadImage: async (file) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          id: uuidv4(),
-          url: URL.createObjectURL(file),
-          analysis: {
-            wbc: Math.floor(Math.random() * 20),
-            rbc: Math.floor(Math.random() * 10),
-            crystals: Math.random() > 0.5 ? 'Present' : 'Absent',
-            risk: Math.floor(Math.random() * 100),
-          }
-        });
-      }, 1500);
-    });
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(`${BACKEND_URL}/reports/analyze`, {
+          method: 'POST',
+          headers: {
+             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          body: formData
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to analyze image');
+      return data.data;
   },
 
   getReport: async (reportId) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(MOCK_REPORTS.find(r => r.id === reportId));
-      }, 500);
-    });
+      const response = await fetch(`${BACKEND_URL}/reports/${reportId}`, {
+          headers: getAuthHeaders()
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to fetch report');
+      return data.data;
   },
   
-  submitVerification: async (reportId, data) => {
-      return new Promise((resolve) => {
-          setTimeout(() => {
-              console.log('Verification submitted for', reportId, data);
-              resolve({ success: true });
-          }, 800);
-      })
+  submitVerification: async (reportId, verificationData) => {
+      const response = await fetch(`${BACKEND_URL}/reports/${reportId}/verify`, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(verificationData)
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to verify report');
+      return data.data;
   }
 };
+

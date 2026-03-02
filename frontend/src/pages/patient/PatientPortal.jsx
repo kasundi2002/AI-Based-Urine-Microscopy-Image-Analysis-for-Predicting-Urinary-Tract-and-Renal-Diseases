@@ -14,7 +14,8 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import { useLabData } from '../../context/LabDataContext';
 import { useAuth } from '../../context/AuthContext';
 
-const PATIENT_ID = 'PAT-2023-001';
+// Removed hardcoded PATIENT_ID constant
+
 
 const PatientPortal = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -23,8 +24,9 @@ const PatientPortal = () => {
   const { getLatestResult, getPatientResults, submitQuestionnaire, getQuestionnaire } = useLabData();
   const { user } = useAuth();
 
-  const latestResult = getLatestResult(PATIENT_ID);
-  const allResults = getPatientResults(PATIENT_ID);
+   const displayPatientId = user?.patientId || 'N/A';
+   const latestResult = getLatestResult(displayPatientId);
+   const allResults = getPatientResults(displayPatientId);
 
   const convertToReport = (labResult) => {
     if (!labResult) return null;
@@ -121,7 +123,7 @@ const PatientPortal = () => {
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 0.5 }}>
                 <Chip 
-                  label={`ID: ${PATIENT_ID}`} 
+                  label={`ID: ${displayPatientId}`} 
                   size="small"
                   sx={{ bgcolor: alpha('#fff', 0.1), color: 'white', fontWeight: 600, fontSize: '0.7rem', height: 22 }}
                 />

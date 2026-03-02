@@ -108,7 +108,7 @@ const AnalysisView = ({ image, analysis, patient }) => {
 
   const handleSubmitReport = () => {
     submitLabResult({
-      patientId: patient?.id || 'PAT-2023-001',
+      patientId: patient?.patientId || 'PAT-2023-001',
       patientName: patient?.name || 'John Doe',
       findings: {
         wbc: data.wbc || 5,
@@ -206,7 +206,7 @@ const AnalysisView = ({ image, analysis, patient }) => {
           <Box>
             <Typography variant="subtitle1" fontWeight={700}>{patient?.name || "Kane Peter"}</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="caption" color="text.secondary">ID: {patient?.id || "P01"}</Typography>
+              <Typography variant="caption" color="text.secondary">ID: {patient?.patientId || "P01"}</Typography>
               <Box sx={{ width: 4, height: 4, borderRadius: '50%', bgcolor: 'text.disabled' }} />
               <Typography variant="caption" color="text.secondary">
                 <CalendarTodayIcon sx={{ fontSize: 11, mr: 0.3, verticalAlign: 'middle' }} />
