@@ -1,8 +1,0 @@
-flask
-flask-cors
-flasgger
-ultralytics
-tensorflow
-opencv-python
-numpy
-werkzeug
