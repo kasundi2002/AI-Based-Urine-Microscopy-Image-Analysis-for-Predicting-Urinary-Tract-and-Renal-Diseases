@@ -1,0 +1,22 @@
+seed: 42
+
+data:
+  root: "data/rbc"        # Root directory for ImageFolder-style dataset
+  image_size: 224
+  num_workers: 4
+
+model:
+  variant: "b0"           # one of: b0, b2, b4
+  pretrained: true
+
+training:
+  output_dir: "outputs/b0"
+  batch_size: 32
+  epochs: 30
+  lr: 1.0e-4
+  weight_decay: 1.0e-5
+  lr_step_size: 10
+  lr_gamma: 0.1
+
+
+

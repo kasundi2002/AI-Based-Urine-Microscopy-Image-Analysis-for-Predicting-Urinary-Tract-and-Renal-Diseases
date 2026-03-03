@@ -1,0 +1,68 @@
+# Data
+data/
+results/
+models/
+
+# Images
+*.png
+*.jpg
+*.jpeg
+
+# Model weights
+*.pth
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Python
+__pycache__/
+
+
+# OS / environment
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.log
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# Python packaging / tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+*.nbconvert.ipynb
+
+# Data and images (never commit raw or derived data)
+data/
+datasets/
+images/
+figures/
+results/
+outputs/
+logs/
+
+# Trained models and checkpoints
+*.pth
+*.pt
+checkpoints/
+models/
+
+# IDE / editor
+.vscode/
+.idea/
+
+
+
