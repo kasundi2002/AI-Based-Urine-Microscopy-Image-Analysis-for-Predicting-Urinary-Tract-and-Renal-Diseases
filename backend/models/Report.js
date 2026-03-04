@@ -19,20 +19,8 @@ const reportSchema = new mongoose.Schema({
         type: String, // Path or URL to images
         required: true
     },
-    findings: {
-        wbc: { type: Number, default: 0 },
-        rbc: { type: Number, default: 0 },
-        crystals: { type: String, default: 'Absent' },
-        bacteria: { type: String, default: 'None' }
-    },
-    riskScore: {
-        type: Number,
-        min: 0,
-        max: 100
-    },
-    riskLabel: {
-        type: String,
-        default: 'Pending Analysis'
+    analysis: {
+        type: mongoose.Schema.Types.Mixed // Allows nested ML payload structure without strict validation
     },
     status: {
         type: String,

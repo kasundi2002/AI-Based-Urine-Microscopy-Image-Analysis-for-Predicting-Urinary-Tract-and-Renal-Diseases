@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Box, Paper, Typography, Button, TextField, Autocomplete, Tabs, Tab, 
+import {
+  Box, Paper, Typography, Button, TextField, Autocomplete, Tabs, Tab,
   CircularProgress, Grid, Divider, Avatar, Chip, Stepper, Step, StepLabel, StepConnector
 } from '@mui/material';
 import { alpha, styled } from '@mui/material/styles';
@@ -56,14 +56,14 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [uploadedImage, setUploadedImage] = useState(null);
-  
+
   const videoRef = useRef(null);
   const [stream, setStream] = useState(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
 
   useEffect(() => {
     if (isCameraActive && videoRef.current && stream) {
-       videoRef.current.srcObject = stream;
+      videoRef.current.srcObject = stream;
     }
   }, [isCameraActive, stream, inputMethod]);
 
@@ -135,8 +135,13 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
   const handleAnalysis = async (file) => {
     setAnalyzing(true);
     try {
-      const result = await api.uploadImage(file);
-      setUploadedImage(result.url);
+      // Ensure we pass patientId for the backend route
+      const result = await api.uploadImage(file, selectedPatient?._id);
+
+      // result holds the mongodb document (with imageUrl and analysis object)
+      const fullImageUrl = `http://localhost:5000${result.imageUrl}`;
+
+      setUploadedImage(fullImageUrl);
       setAnalysisResult(result.analysis);
     } catch (error) {
       console.error("Analysis failed", error);
@@ -154,7 +159,7 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
     return (
       <Box sx={{ animation: 'fadeIn 0.4s ease-out' }}>
         <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
-        <Button 
+        <Button
           onClick={() => { setAnalysisResult(null); setUploadedImage(null); setInputMethod(0); }}
           startIcon={<ArrowBackIcon />}
           sx={{ mb: 2, textTransform: 'none', fontWeight: 600, color: '#00bcd4' }}
@@ -203,12 +208,12 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
       <Grid container spacing={3}>
         {/* Left Panel: Patient Selection */}
         <Grid size={{ xs: 12, md: 4 }}>
-          <Paper elevation={0} sx={{ 
+          <Paper elevation={0} sx={{
             borderRadius: 3, overflow: 'hidden', height: '100%',
             border: '1px solid', borderColor: selectedPatient ? '#00bcd4' : 'divider',
             transition: 'border-color 0.3s',
           }}>
-            <Box sx={{ 
+            <Box sx={{
               px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider',
               display: 'flex', alignItems: 'center', gap: 1.5,
               bgcolor: selectedPatient ? alpha('#00bcd4', 0.03) : 'transparent',
@@ -225,19 +230,19 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
                 value={selectedPatient}
                 onChange={(event, newValue) => setSelectedPatient(newValue)}
                 renderInput={(params) => (
-                  <TextField 
-                    {...params} 
-                    placeholder="Search by name or ID..." 
-                    variant="outlined" 
+                  <TextField
+                    {...params}
+                    placeholder="Search by name or ID..."
+                    variant="outlined"
                     size="small"
                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                   />
                 )}
                 sx={{ mb: 3 }}
               />
-              
+
               {selectedPatient ? (
-                <Paper elevation={0} sx={{ 
+                <Paper elevation={0} sx={{
                   p: 2.5, borderRadius: 2.5,
                   border: '1px solid', borderColor: alpha('#00bcd4', 0.15),
                   bgcolor: alpha('#00bcd4', 0.03),
@@ -268,7 +273,7 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
                   </Box>
                 </Paper>
               ) : (
-                <Box sx={{ 
+                <Box sx={{
                   p: 4, textAlign: 'center', borderRadius: 2.5,
                   border: '1px dashed', borderColor: 'divider',
                 }}>
@@ -283,14 +288,14 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
 
         {/* Right Panel: Image Input */}
         <Grid size={{ xs: 12, md: 8 }}>
-          <Paper elevation={0} sx={{ 
+          <Paper elevation={0} sx={{
             borderRadius: 3, overflow: 'hidden', height: '100%',
             border: '1px solid', borderColor: 'divider',
             opacity: selectedPatient ? 1 : 0.5,
             pointerEvents: selectedPatient ? 'auto' : 'none',
             transition: 'opacity 0.3s',
           }}>
-            <Box sx={{ 
+            <Box sx={{
               px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider',
               display: 'flex', alignItems: 'center', gap: 1.5
             }}>
@@ -299,7 +304,7 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
                 Acquire Image
               </Typography>
             </Box>
-            
+
             <Box sx={{ p: 3 }}>
               {!selectedPatient ? (
                 <Box sx={{ p: 8, textAlign: 'center' }}>
@@ -309,11 +314,11 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
                 </Box>
               ) : (
                 <>
-                  <Tabs 
-                    value={inputMethod} 
-                    onChange={handleTabChange} 
-                    sx={{ 
-                      mb: 3, 
+                  <Tabs
+                    value={inputMethod}
+                    onChange={handleTabChange}
+                    sx={{
+                      mb: 3,
                       '& .MuiTab-root': { textTransform: 'none', fontWeight: 600, minHeight: 44 },
                       '& .MuiTabs-indicator': { bgcolor: '#00bcd4', height: 3, borderRadius: '3px 3px 0 0' },
                     }}
@@ -342,14 +347,14 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
                       {inputMethod === 1 && (
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                           {isCameraActive ? (
-                            <Paper elevation={0} sx={{ 
+                            <Paper elevation={0} sx={{
                               width: '100%', height: 400, bgcolor: '#000', mb: 3, overflow: 'hidden', borderRadius: 3,
                               display: 'flex', justifyContent: 'center', border: '1px solid', borderColor: 'divider'
                             }}>
                               <video ref={videoRef} autoPlay playsInline style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                             </Paper>
                           ) : (
-                            <Box sx={{ 
+                            <Box sx={{
                               width: '100%', height: 300, mb: 3, borderRadius: 3,
                               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                               border: '2px dashed', borderColor: alpha('#9e9e9e', 0.2), bgcolor: alpha('#f8fafc', 0.5)
@@ -358,14 +363,14 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
                               <Typography variant="body2" color="text.secondary">Camera is initializing...</Typography>
                             </Box>
                           )}
-                          
-                          <Button 
-                            variant="contained" 
+
+                          <Button
+                            variant="contained"
                             size="large"
-                            startIcon={<CameraAltIcon />} 
+                            startIcon={<CameraAltIcon />}
                             onClick={captureImage}
                             disabled={!isCameraActive}
-                            sx={{ 
+                            sx={{
                               py: 1.5, px: 5, borderRadius: 2, textTransform: 'none', fontWeight: 700,
                               background: isCameraActive ? 'linear-gradient(135deg, #ef5350, #c62828)' : undefined,
                               boxShadow: isCameraActive ? '0 4px 14px rgba(239,83,80,0.3)' : undefined

@@ -3,9 +3,9 @@ import microscopyImage from '../assets/c2.jpg';
 
 // Mock Data
 const MOCK_USERS = [
-  { id: 'mlt-1', username: 'mlt_user', password: 'password', role: 'MLT', name: 'Sarah Tech' },
-  { id: 'doc-1', username: 'doc_user', password: 'password', role: 'CLINICIAN', name: 'Dr. Smith' },
-  { id: 'pat-1', username: 'pat_user', password: 'password', role: 'PATIENT', name: 'John Doe' },
+    { id: 'mlt-1', username: 'mlt_user', password: 'password', role: 'MLT', name: 'Sarah Tech' },
+    { id: 'doc-1', username: 'doc_user', password: 'password', role: 'CLINICIAN', name: 'Dr. Smith' },
+    { id: 'pat-1', username: 'pat_user', password: 'password', role: 'PATIENT', name: 'John Doe' },
 ];
 
 const BACKEND_URL = 'http://localhost:5000/api';
@@ -19,73 +19,76 @@ const getAuthHeaders = () => {
 };
 
 export const api = {
-  login: async (username, password) => {
-      const response = await fetch(`${BACKEND_URL}/auth/login`, {
-          method: 'POST',
-           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Login failed');
-      return data;
-  },
+    login: async (username, password) => {
+        const response = await fetch(`${BACKEND_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Login failed');
+        return data;
+    },
 
-  getPatients: async () => {
-      const response = await fetch(`${BACKEND_URL}/patients`, {
-          headers: getAuthHeaders()
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to fetch patients');
-      return data.data; // Assuming your API returns { success: true, count: X, data: [...] }
-  },
+    getPatients: async () => {
+        const response = await fetch(`${BACKEND_URL}/patients`, {
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to fetch patients');
+        return data.data; // Assuming your API returns { success: true, count: X, data: [...] }
+    },
 
-  addPatient: async (patientData) => {
-      const response = await fetch(`${BACKEND_URL}/patients`, {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: JSON.stringify(patientData)
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to add patient');
-      return data.data; // return created patient
-  },
+    addPatient: async (patientData) => {
+        const response = await fetch(`${BACKEND_URL}/patients`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(patientData)
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to add patient');
+        return data.data; // return created patient
+    },
 
-  uploadImage: async (file) => {
-      const formData = new FormData();
-      formData.append('image', file);
-      
-      const token = localStorage.getItem('token');
+    uploadImage: async (file, patientId) => {
+        const formData = new FormData();
+        formData.append('image', file);
+        if (patientId) {
+            formData.append('patientId', patientId);
+        }
 
-      const response = await fetch(`${BACKEND_URL}/reports/analyze`, {
-          method: 'POST',
-          headers: {
-             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-          },
-          body: formData
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to analyze image');
-      return data.data;
-  },
+        const token = localStorage.getItem('token');
 
-  getReport: async (reportId) => {
-      const response = await fetch(`${BACKEND_URL}/reports/${reportId}`, {
-          headers: getAuthHeaders()
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to fetch report');
-      return data.data;
-  },
-  
-  submitVerification: async (reportId, verificationData) => {
-      const response = await fetch(`${BACKEND_URL}/reports/${reportId}/verify`, {
-          method: 'PUT',
-          headers: getAuthHeaders(),
-          body: JSON.stringify(verificationData)
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to verify report');
-      return data.data;
-  }
+        const response = await fetch(`${BACKEND_URL}/reports/upload`, {
+            method: 'POST',
+            headers: {
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: formData
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to analyze image');
+        return data.data;
+    },
+
+    getReport: async (reportId) => {
+        const response = await fetch(`${BACKEND_URL}/reports/${reportId}`, {
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to fetch report');
+        return data.data;
+    },
+
+    submitVerification: async (reportId, verificationData) => {
+        const response = await fetch(`${BACKEND_URL}/reports/${reportId}/verify`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(verificationData)
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to verify report');
+        return data.data;
+    }
 };
 

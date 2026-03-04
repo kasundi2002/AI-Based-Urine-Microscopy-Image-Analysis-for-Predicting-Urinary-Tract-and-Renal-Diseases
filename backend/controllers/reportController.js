@@ -1,5 +1,8 @@
 import Report from '../models/Report.js';
 import Patient from '../models/Patient.js';
+import fs from 'fs';
+import axios from 'axios';
+import FormData from 'form-data';
 
 // @desc    Get all reports (with patient and uploader details)
 // @route   GET /api/reports
@@ -27,14 +30,21 @@ export const uploadImage = async (req, res, next) => {
 
         const { patientId } = req.body;
 
-        // Quick mock AI analysis
-        const wbc = Math.floor(Math.random() * 20);
-        const rbc = Math.floor(Math.random() * 10);
-        const crystals = Math.random() > 0.5 ? 'Present' : 'Absent';
-        const riskScore = Math.floor(Math.random() * 100);
-        let riskLabel = 'Low Risk';
-        if (riskScore > 75) riskLabel = 'High Risk';
-        else if (riskScore > 40) riskLabel = 'Moderate Risk';
+        // Call ML Core Service
+        const formData = new FormData();
+        formData.append('file', fs.createReadStream(req.file.path));
+
+        let mlResponse;
+        try {
+            mlResponse = await axios.post('http://localhost:8000/analyze-image', formData, {
+                headers: {
+                    ...formData.getHeaders()
+                }
+            });
+        } catch (error) {
+            console.error('ML Service Error:', error.message);
+            return res.status(500).json({ success: false, error: 'ML Core server not reachable' });
+        }
 
         // Update patient status to Ready for Review
         await Patient.findByIdAndUpdate(patientId, { status: 'Ready for Review' });
@@ -43,9 +53,7 @@ export const uploadImage = async (req, res, next) => {
             patientId,
             uploadedBy: req.user.id,
             imageUrl: `/uploads/${req.file.filename}`, // From multer
-            findings: { wbc, rbc, crystals, bacteria: 'None' },
-            riskScore,
-            riskLabel,
+            analysis: mlResponse.data,
             status: 'Pending Verification'
         });
 
