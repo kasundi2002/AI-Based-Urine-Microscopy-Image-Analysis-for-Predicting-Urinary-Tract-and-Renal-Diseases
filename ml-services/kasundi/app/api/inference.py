@@ -30,8 +30,8 @@ router = APIRouter(tags=["Inference"])
 async def predict(image: UploadFile = File(...)):
     image_bytes = await image.read()
 
-    wbc_count = detect_wbc(image_bytes)
-    yeast_count = detect_yeast(image_bytes)
+    wbc_count, wbc_boxes = detect_wbc(image_bytes)
+    yeast_count, yeast_boxes = detect_yeast(image_bytes)
     ecoli_present = classify_ecoli(image_bytes)
 
     image_based_uti = decide_uti(
@@ -42,7 +42,9 @@ async def predict(image: UploadFile = File(...)):
 
     return {
         "wbc_count": wbc_count,
+        "wbc_boxes": wbc_boxes,
         "yeast_count": yeast_count,
+        "yeast_boxes": yeast_boxes,
         "ecoli_present": ecoli_present,
         "image_based_uti": image_based_uti
     }
@@ -86,8 +88,8 @@ async def predict_with_metadata(
     # ------------------------------------------------
     # Microscopy (Detection)
     # ------------------------------------------------
-    wbc_count = detect_wbc(image_bytes)
-    yeast_count = detect_yeast(image_bytes)
+    wbc_count, wbc_boxes = detect_wbc(image_bytes)
+    yeast_count, yeast_boxes = detect_yeast(image_bytes)
     ecoli_present = classify_ecoli(image_bytes)
 
     image_based_uti = decide_uti(
@@ -185,7 +187,9 @@ async def predict_with_metadata(
     # ------------------------------------------------
     return {
         "wbc_count": wbc_count,
+        "wbc_boxes": wbc_boxes,
         "yeast_count": yeast_count,
+        "yeast_boxes": yeast_boxes,
         "ecoli_present": ecoli_present,
 
         "segmentation_used": include_segmentation,
