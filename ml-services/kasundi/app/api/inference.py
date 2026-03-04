@@ -56,6 +56,34 @@ async def predict(image: UploadFile = File(...)):
 
 
 # --------------------------------------------------
+# Individual particle endpoints
+# --------------------------------------------------
+
+@router.post("/count_wbc")
+async def count_wbc(image: UploadFile = File(...)):
+    """Return only white blood cell count and boxes."""
+    image_bytes = await image.read()
+    count, boxes = detect_wbc(image_bytes)
+    return {"wbc_count": count, "wbc_boxes": boxes}
+
+
+@router.post("/count_yeast")
+async def count_yeast(image: UploadFile = File(...)):
+    """Return only yeast count and boxes."""
+    image_bytes = await image.read()
+    count, boxes = detect_yeast(image_bytes)
+    return {"yeast_count": count, "yeast_boxes": boxes}
+
+
+@router.post("/count_bacteria")
+async def count_bacteria(image: UploadFile = File(...)):
+    """Return only bacteria count and boxes."""
+    image_bytes = await image.read()
+    count, boxes = detect_bacteria(image_bytes)
+    return {"bacteria_count": count, "bacteria_boxes": boxes}
+
+
+# --------------------------------------------------
 # Image + metadata + optional segmentation
 # --------------------------------------------------
 @router.post("/predict_with_metadata")

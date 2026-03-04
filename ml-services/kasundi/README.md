@@ -108,6 +108,12 @@ The system is deployed using **FastAPI** and exposes REST endpoints for inferenc
 - `/predict` – image-only inference
 - `/predict_with_metadata` – image + clinical metadata + optional segmentation
 
+Additional endpoints provide counts for individual particle types (WBCs, yeast, bacteria):
+
+- `/count_wbc`
+- `/count_yeast`
+- `/count_bacteria`
+
 The API returns structured JSON outputs suitable for web applications, laboratory systems, and research pipelines.
 
 
