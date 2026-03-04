@@ -86,8 +86,14 @@ const AnalysisView = ({ image, analysis, patient }) => {
     const canvas = canvasRef.current;
     if (!img || !canvas || !analysis) return;
 
-    canvas.width = img.width;
-    canvas.height = img.height;
+    // Dynamic bounding match mapping against DOM scaled width
+    const rect = img.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+
+    // Relative ratios scaling boxes from absolute raw dimensions down to display rect widths
+    const scaleX = rect.width / img.naturalWidth;
+    const scaleY = rect.height / img.naturalHeight;
 
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -96,16 +102,32 @@ const AnalysisView = ({ image, analysis, patient }) => {
       if (!data || !data.detected) return;
 
       data.boxes.forEach(box => {
-        const [x1, y1, x2, y2] = box.bbox;
+        const [rawX1, rawY1, rawX2, rawY2] = box.bbox;
 
-        if (particleName === "casts")
+        // Scale values
+        const x1 = rawX1 * scaleX;
+        const y1 = rawY1 * scaleY;
+        const x2 = rawX2 * scaleX;
+        const y2 = rawY2 * scaleY;
+
+        if (particleName === "casts") {
           ctx.strokeStyle = "red";
-        else if (particleName === "crystals")
+          ctx.lineWidth = 2;
+        } else if (particleName === "crystals") {
           ctx.strokeStyle = "blue";
-        else
+          ctx.lineWidth = 2;
+        } else if (particleName === "wbc") {
           ctx.strokeStyle = "green";
+          ctx.lineWidth = 2;
+        } else if (particleName === "rbc") {
+          console.log("Drawing RBC box:", box);
+          ctx.strokeStyle = "purple";
+          ctx.lineWidth = 1;
+        } else {
+          ctx.strokeStyle = "cyan";
+          ctx.lineWidth = 2;
+        }
 
-        ctx.lineWidth = 2;
         ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
 
         ctx.font = "14px Arial";
@@ -127,18 +149,22 @@ const AnalysisView = ({ image, analysis, patient }) => {
 
   const crystalsData = analysis?.crystals || {};
   const castsData = analysis?.casts || {};
+  const wbcData = analysis?.wbc || {};
+  const rbcData = analysis?.rbc || {};
 
-  const totalObjects = (crystalsData.total_count || 0) + (castsData.total_count || 0);
+  const totalObjects = (crystalsData.total_count || 0) + (castsData.total_count || 0) + (wbcData.total_count || 0) + (rbcData.total_count || 0);
 
   let riskLevel = 'Low Risk';
   let riskColor = '#66bb6a';
   const cRisk = crystalsData.risk_assessment?.level;
   const castRisk = castsData.risk_assessment?.level;
+  const wbcRisk = wbcData.risk_assessment?.level;
+  const rbcRisk = rbcData.risk_assessment?.level;
 
-  if (cRisk === 'High' || castRisk === 'High Risk') {
+  if (cRisk === 'High' || castRisk === 'High Risk' || wbcRisk === 'UTI Positive' || rbcRisk === 'High Dysmorphic Presence') {
     riskLevel = 'High Risk';
     riskColor = '#ef5350';
-  } else if (cRisk === 'Moderate' || castRisk === 'Moderate Risk') {
+  } else if (cRisk === 'Moderate' || castRisk === 'Moderate Risk' || rbcRisk === 'Moderate Dysmorphic Presence') {
     riskLevel = 'Moderate Risk';
     riskColor = '#ff9100';
   }
@@ -164,8 +190,24 @@ const AnalysisView = ({ image, analysis, patient }) => {
       icon: <BiotechIcon sx={{ fontSize: 18 }} />,
       confidence: castsData.total_count > 0 ? 92 : 99
     },
-    { name: 'RBC', count: 0, types: 'N/A (ML module pending)', color: '#ef5350', icon: <BloodtypeIcon sx={{ fontSize: 18 }} />, confidence: 100 },
-    { name: 'WBC', count: 0, types: 'N/A (ML module pending)', color: '#00bcd4', icon: <ShieldIcon sx={{ fontSize: 18 }} />, confidence: 100 },
+    {
+      name: 'WBC',
+      count: wbcData.total_count || 0,
+      types: wbcData.total_count > 0 ? wbcRisk : 'Not detected',
+      color: '#00bcd4',
+      icon: <ShieldIcon sx={{ fontSize: 18 }} />,
+      confidence: wbcData.total_count > 0 ? 94 : 99
+    },
+    {
+      name: 'RBC',
+      count: rbcData.total_count || 0,
+      types: rbcData.subtype_summary && Object.keys(rbcData.subtype_summary).length > 0
+        ? Object.entries(rbcData.subtype_summary).map(([k, v]) => `${k}: ${v}`).join(' · ')
+        : 'Not detected',
+      color: '#ef5350',
+      icon: <BloodtypeIcon sx={{ fontSize: 18 }} />,
+      confidence: rbcData.total_count > 0 ? 98 : 99
+    },
     { name: 'Bacteria', count: 0, types: 'N/A (ML module pending)', color: '#66bb6a', icon: <BugReportIcon sx={{ fontSize: 18 }} />, confidence: 100 },
   ];
 
@@ -176,8 +218,8 @@ const AnalysisView = ({ image, analysis, patient }) => {
       patientId: patient?.patientId || 'PAT-2023-001',
       patientName: patient?.name || 'John Doe',
       findings: {
-        wbc: 0,
-        rbc: 0,
+        wbc: wbcData.total_count || 0,
+        rbc: rbcData.total_count || 0,
         crystals: crystalsData.total_count > 0 ? 'Present' : 'Absent',
         bacteria: 'None',
         cast: castsData.total_count > 0 ? 'Present' : 'Absent',
