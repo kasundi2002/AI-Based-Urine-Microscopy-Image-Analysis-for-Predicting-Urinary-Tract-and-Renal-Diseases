@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, Typography, Paper, Grid, Table, TableBody, TableCell, TableRow, Button, Snackbar, Alert, Chip, LinearProgress, Divider, IconButton, Tooltip, Avatar } from '@mui/material';
 import { styled, alpha } from '@mui/material/styles';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ReplayIcon from '@mui/icons-material/Replay';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import SendIcon from '@mui/icons-material/Send';
@@ -73,7 +74,7 @@ const StatChip = styled(Paper)(({ theme }) => ({
   }
 }));
 
-const AnalysisView = ({ image, analysis, patient }) => {
+const AnalysisView = ({ image, analysis, patient, onNewAnalysis, onReAnalysis }) => {
   const { submitLabResult } = useLabData();
   const [submitted, setSubmitted] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -247,7 +248,7 @@ const AnalysisView = ({ image, analysis, patient }) => {
       <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
 
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
         <Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
             <ScienceIcon sx={{ color: '#00bcd4', fontSize: 28 }} />
@@ -260,9 +261,27 @@ const AnalysisView = ({ image, analysis, patient }) => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1.5 }}>
+          {onNewAnalysis && (
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              onClick={onNewAnalysis}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                borderRadius: 2,
+                borderColor: alpha('#0f172a', 0.2),
+                color: '#0f172a',
+                '&:hover': { borderColor: '#0f172a', bgcolor: alpha('#0f172a', 0.04) }
+              }}
+            >
+              New Analysis
+            </Button>
+          )}
           <Button
             variant="outlined"
             startIcon={<ReplayIcon />}
+            onClick={onReAnalysis}
             sx={{
               textTransform: 'none',
               fontWeight: 600,
@@ -310,7 +329,7 @@ const AnalysisView = ({ image, analysis, patient }) => {
       <Paper
         elevation={0}
         sx={{
-          p: 2.5, mb: 3, borderRadius: 3,
+          p: 1.5, mb: 1.5, borderRadius: 3,
           border: '1px solid', borderColor: 'divider',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2
         }}
@@ -364,13 +383,13 @@ const AnalysisView = ({ image, analysis, patient }) => {
       </Paper>
 
       {/* Main Content: Image + Findings */}
-      <Grid container spacing={3}>
+      <Grid container spacing={2}>
         {/* Microscopy Image */}
         <Grid size={{ xs: 12, md: 7 }}>
           <Paper
             elevation={0}
             sx={{
-              height: 520, borderRadius: 3, overflow: 'hidden',
+              height: 440, borderRadius: 3, overflow: 'hidden',
               border: '1px solid', borderColor: 'divider',
               display: 'flex', flexDirection: 'column'
             }}
@@ -438,7 +457,7 @@ const AnalysisView = ({ image, analysis, patient }) => {
           <Paper
             elevation={0}
             sx={{
-              height: 520, borderRadius: 3, overflow: 'hidden',
+              height: 440, borderRadius: 3, overflow: 'hidden',
               border: '1px solid', borderColor: 'divider',
               display: 'flex', flexDirection: 'column'
             }}
@@ -488,8 +507,8 @@ const AnalysisView = ({ image, analysis, patient }) => {
                     sx={{
                       p: 2, mt: 1.5, borderRadius: 2.5,
                       border: '1px solid',
-                      borderColor: '#e0e0e0',
-                      borderLeft: isDetected ? `4px solid ${p.color}` : '1px solid #e0e0e0',
+                      borderColor: alpha(p.color, 0.35),
+                      borderLeft: isDetected ? `4px solid ${p.color}` : `1px solid ${alpha(p.color, 0.35)}`,
                       bgcolor: '#fff',
                       transition: 'all 0.25s ease',
                       '&:hover': {

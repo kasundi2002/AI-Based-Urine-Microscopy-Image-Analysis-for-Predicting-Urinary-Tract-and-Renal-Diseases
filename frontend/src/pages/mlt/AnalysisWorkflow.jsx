@@ -159,14 +159,7 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
     return (
       <Box sx={{ animation: 'fadeIn 0.4s ease-out' }}>
         <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
-        <Button
-          onClick={() => { setAnalysisResult(null); setUploadedImage(null); setInputMethod(0); }}
-          startIcon={<ArrowBackIcon />}
-          sx={{ mb: 2, textTransform: 'none', fontWeight: 600, color: '#00bcd4' }}
-        >
-          ← New Analysis
-        </Button>
-        <AnalysisView image={uploadedImage} analysis={analysisResult} patient={selectedPatient} />
+        <AnalysisView image={uploadedImage} analysis={analysisResult} patient={selectedPatient} onNewAnalysis={() => { setAnalysisResult(null); setUploadedImage(null); setInputMethod(0); setSelectedPatient(null); }} onReAnalysis={() => { setAnalysisResult(null); setUploadedImage(null); setInputMethod(0); }} />
       </Box>
     );
   }
