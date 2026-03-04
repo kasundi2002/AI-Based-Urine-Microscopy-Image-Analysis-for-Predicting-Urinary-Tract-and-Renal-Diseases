@@ -5,6 +5,7 @@ This repository contains the backend system for automated analysis of urine micr
 ## Features
 - WBC detection and counting (YOLOv11)
 - Yeast detection and counting (YOLOv11)
+- **Bacteria detection and counting (YOLOv9s)**
 - E. coli presence classification (EfficientNet-B0)
 - Rule-based UTI decision logic
 - FastAPI REST interface
@@ -49,8 +50,7 @@ At inference time, the system executes the following steps:
 
 2. **Microscopy-Based Analysis**
    - **WBC Detection**: Object detection model estimates white blood cell count
-   - **Yeast Detection**: Object detection model estimates yeast count
-   - **Bacteria Classification**: Image-level classifier predicts *E. coli* presence
+   - **Yeast Detection**: Object detection model estimates yeast count   3. **Bacteria Detection**: YOLO model locates and counts bacteria   - **Bacteria Classification**: Image-level classifier predicts *E. coli* presence
 
 3. **Image-Based UTI Decision**
    - A rule-based module evaluates microscopy findings to infer image-based UTI likelihood
@@ -119,6 +119,7 @@ Please download the following files and place them accordingly:
 
 - WBC YOLOv11-n → `models/wbc/wbc_yolov11n.pt`
 - Yeast RT-DETR-L → `models/yeast/yeast_rtdetr_l.pt`
+- **Bacteria YOLOv9s →** `models/bacteria/best_bacteria_detect_yolov9s.pt`
 - E. coli EfficientNet-B0 → `models/bacteria/ecoli_efficientnet_b0.pth`
 
 ## Model Selection and Deployment Rationale

@@ -5,6 +5,7 @@ import numpy as np
 # --- Microscopy models ---
 from app.models.wbc_detector import detect_wbc
 from app.models.yeast_detector import detect_yeast
+from app.models.bacteria_detector import detect_bacteria
 from app.models.ecoli_classifier import classify_ecoli
 
 # --- Clinical models ---
@@ -32,12 +33,14 @@ async def predict(image: UploadFile = File(...)):
 
     wbc_count, wbc_boxes = detect_wbc(image_bytes)
     yeast_count, yeast_boxes = detect_yeast(image_bytes)
+    bacteria_count, bacteria_boxes = detect_bacteria(image_bytes)
     ecoli_present = classify_ecoli(image_bytes)
 
     image_based_uti = decide_uti(
         wbc_count=wbc_count,
         yeast_count=yeast_count,
-        ecoli_present=ecoli_present
+        ecoli_present=ecoli_present,
+        bacteria_count=bacteria_count
     )
 
     return {
@@ -45,6 +48,8 @@ async def predict(image: UploadFile = File(...)):
         "wbc_boxes": wbc_boxes,
         "yeast_count": yeast_count,
         "yeast_boxes": yeast_boxes,
+        "bacteria_count": bacteria_count,
+        "bacteria_boxes": bacteria_boxes,
         "ecoli_present": ecoli_present,
         "image_based_uti": image_based_uti
     }
@@ -90,12 +95,14 @@ async def predict_with_metadata(
     # ------------------------------------------------
     wbc_count, wbc_boxes = detect_wbc(image_bytes)
     yeast_count, yeast_boxes = detect_yeast(image_bytes)
+    bacteria_count, bacteria_boxes = detect_bacteria(image_bytes)
     ecoli_present = classify_ecoli(image_bytes)
 
     image_based_uti = decide_uti(
         wbc_count=wbc_count,
         yeast_count=yeast_count,
-        ecoli_present=ecoli_present
+        ecoli_present=ecoli_present,
+        bacteria_count=bacteria_count
     )
 
     # ------------------------------------------------
@@ -190,6 +197,8 @@ async def predict_with_metadata(
         "wbc_boxes": wbc_boxes,
         "yeast_count": yeast_count,
         "yeast_boxes": yeast_boxes,
+        "bacteria_count": bacteria_count,
+        "bacteria_boxes": bacteria_boxes,
         "ecoli_present": ecoli_present,
 
         "segmentation_used": include_segmentation,
