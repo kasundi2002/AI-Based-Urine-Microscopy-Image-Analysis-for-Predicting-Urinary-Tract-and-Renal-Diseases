@@ -50,10 +50,18 @@ At inference time, the system executes the following steps:
 
 2. **Microscopy-Based Analysis**
    - **WBC Detection**: Object detection model estimates white blood cell count
-   - **Yeast Detection**: Object detection model estimates yeast count   3. **Bacteria Detection**: YOLO model locates and counts bacteria   - **Bacteria Classification**: Image-level classifier predicts *E. coli* presence
+   - **Yeast Detection**: Object detection model estimates yeast count
+   - **Bacteria Detection**: YOLO model locates and counts bacteria
+   - **Bacteria Classification**: Image-level classifier predicts *E. coli* presence
 
 3. **Image-Based UTI Decision**
    - A rule-based module evaluates microscopy findings to infer image-based UTI likelihood
+   - **Decision rules** currently implemented by `decide_uti`:
+     * Lower bacterial UTI: WBC + bacteria
+     * Upper bacterial UTI: WBC + bacteria + WBC casts *(commented until cast detector added)*
+     * Lower fungal UTI: WBC + yeast
+     * Upper fungal UTI: WBC + yeast + RBC *(commented until RBC detector added)*
+     * No UTI: few or no cells detected
 
 4. **Optional Segmentation and Severity Estimation**
    - Semantic segmentation is applied to detected particles (if enabled)

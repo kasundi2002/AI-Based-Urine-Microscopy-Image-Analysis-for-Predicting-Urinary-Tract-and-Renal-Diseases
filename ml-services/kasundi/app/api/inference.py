@@ -36,11 +36,14 @@ async def predict(image: UploadFile = File(...)):
     bacteria_count, bacteria_boxes = detect_bacteria(image_bytes)
     ecoli_present = classify_ecoli(image_bytes)
 
-    image_based_uti = decide_uti(
+    # rbc_count and wbc_casts not available; pass zeros for now
+    image_based_uti, image_uti_type = decide_uti(
         wbc_count=wbc_count,
         yeast_count=yeast_count,
         ecoli_present=ecoli_present,
-        bacteria_count=bacteria_count
+        bacteria_count=bacteria_count,
+        rbc_count=0,
+        wbc_casts=0,
     )
 
     return {
@@ -51,7 +54,8 @@ async def predict(image: UploadFile = File(...)):
         "bacteria_count": bacteria_count,
         "bacteria_boxes": bacteria_boxes,
         "ecoli_present": ecoli_present,
-        "image_based_uti": image_based_uti
+        "image_based_uti": image_based_uti,
+        "image_uti_type": image_uti_type
     }
 
 
@@ -126,11 +130,14 @@ async def predict_with_metadata(
     bacteria_count, bacteria_boxes = detect_bacteria(image_bytes)
     ecoli_present = classify_ecoli(image_bytes)
 
-    image_based_uti = decide_uti(
+    # rbc_count and wbc_casts not available; pass zeros for now
+    image_based_uti, image_uti_type = decide_uti(
         wbc_count=wbc_count,
         yeast_count=yeast_count,
         ecoli_present=ecoli_present,
-        bacteria_count=bacteria_count
+        bacteria_count=bacteria_count,
+        rbc_count=0,
+        wbc_casts=0,
     )
 
     # ------------------------------------------------
@@ -228,6 +235,7 @@ async def predict_with_metadata(
         "bacteria_count": bacteria_count,
         "bacteria_boxes": bacteria_boxes,
         "ecoli_present": ecoli_present,
+        "image_uti_type": image_uti_type,
 
         "segmentation_used": include_segmentation,
         "wbc_area": wbc_area,
