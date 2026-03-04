@@ -78,23 +78,39 @@ const AnalysisView = ({ image, analysis, patient, onNewAnalysis, onReAnalysis })
   const { submitLabResult } = useLabData();
   const [submitted, setSubmitted] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [zoom, setZoom] = useState(1);
 
   const imgRef = useRef(null);
   const canvasRef = useRef(null);
+  const imagePanelRef = useRef(null);
+
+  const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 4));
+  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.5));
+  const handleResetZoom = () => setZoom(1);
+  const handleFullscreen = () => {
+    if (imagePanelRef.current) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        imagePanelRef.current.requestFullscreen();
+      }
+    }
+  };
 
   const drawBoxes = () => {
     const img = imgRef.current;
     const canvas = canvasRef.current;
     if (!img || !canvas || !analysis) return;
 
-    // Dynamic bounding match mapping against DOM scaled width
-    const rect = img.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
+    // Use offsetWidth/Height instead of getBoundingClientRect
+    // because getBoundingClientRect is affected by CSS transforms (zoom scale)
+    const displayWidth = img.offsetWidth;
+    const displayHeight = img.offsetHeight;
+    canvas.width = displayWidth;
+    canvas.height = displayHeight;
 
-    // Relative ratios scaling boxes from absolute raw dimensions down to display rect widths
-    const scaleX = rect.width / img.naturalWidth;
-    const scaleY = rect.height / img.naturalHeight;
+    const scaleX = displayWidth / img.naturalWidth;
+    const scaleY = displayHeight / img.naturalHeight;
 
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -402,20 +418,20 @@ const AnalysisView = ({ image, analysis, patient, onNewAnalysis, onReAnalysis })
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#66bb6a' }} />
                 <Typography variant="caption" fontWeight={600} color="text.secondary">MICROSCOPY VIEW</Typography>
-                <Chip label="400x" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700 }} />
+                <Chip label={`${Math.round(zoom * 100)}%`} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700 }} />
               </Box>
               <Box sx={{ display: 'flex', gap: 0.5 }}>
-                <Tooltip title="Zoom In"><IconButton size="small"><ZoomInIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
-                <Tooltip title="Zoom Out"><IconButton size="small"><ZoomOutIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
-                <Tooltip title="Focus"><IconButton size="small"><CenterFocusStrongIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
-                <Tooltip title="Fullscreen"><IconButton size="small"><FullscreenIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
+                <Tooltip title="Zoom In"><IconButton size="small" onClick={handleZoomIn}><ZoomInIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
+                <Tooltip title="Zoom Out"><IconButton size="small" onClick={handleZoomOut}><ZoomOutIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
+                <Tooltip title="Reset Zoom"><IconButton size="small" onClick={handleResetZoom}><CenterFocusStrongIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
+                <Tooltip title="Fullscreen"><IconButton size="small" onClick={handleFullscreen}><FullscreenIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
               </Box>
             </Box>
 
             {/* Image */}
-            <Box sx={{ flexGrow: 1, position: 'relative', overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ImageContainer sx={{ overflow: 'auto', bgcolor: '#f8f9fa' }}>
-                <div style={{ position: "relative", display: "inline-block" }}>
+            <Box ref={imagePanelRef} sx={{ flexGrow: 1, position: 'relative', overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#f8f9fa' }}>
+              <ImageContainer sx={{ overflow: 'visible', bgcolor: '#f8f9fa' }}>
+                <div style={{ position: "relative", display: "inline-block", transform: `scale(${zoom})`, transformOrigin: 'center center', transition: 'transform 0.2s ease' }}>
                   <img ref={imgRef} src={image} alt="Microscopy" onLoad={drawBoxes} style={{ maxWidth: '100%', height: 'auto', display: 'block' }} />
                   <canvas
                     ref={canvasRef}
