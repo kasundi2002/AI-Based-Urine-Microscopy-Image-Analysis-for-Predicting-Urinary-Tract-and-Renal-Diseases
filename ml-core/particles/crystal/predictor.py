@@ -19,16 +19,12 @@ class CrystalPredictor:
             # Find dominant type
             dominant_type = max(subtype_counts, key=subtype_counts.get)
             
-            if dominant_type == "calcium_oxalate":
+            if dominant_type in ("CaOx_Dihydrate", "CaOx_Monohydrate"):
                 clinical_suggestion = "Increased risk of calcium oxalate stone formation. Consider increasing fluid intake and reducing dietary oxalate."
-            elif dominant_type == "uric_acid":
+            elif dominant_type == "Uric_Acid":
                 clinical_suggestion = "Signs of acidic urine. Suggest hydration and alkalization therapy."
-            elif dominant_type == "calcium_phosphate":
+            elif dominant_type == "Phosphate":
                 clinical_suggestion = "Associated with alkaline urine. Check for underlying metabolic causes."
-            elif dominant_type == "struvite":
-                clinical_suggestion = "Strong association with urinary tract infections. Antibiotic treatment may be required."
-            elif dominant_type == "cystine":
-                clinical_suggestion = "Cystine crystals detected. Check for cystinuria and increase fluid intake."
             else:
                 clinical_suggestion = "Crystals detected. Consult a nephrologist for further analysis."
 

@@ -62,14 +62,12 @@ class CrystalPipeline:
         }
 
     def process(self, image_np: np.ndarray, detections: dict):
-        # Initialize counts
+        # Initialize counts using actual ML class names
         counts = {
-            "calcium_oxalate": 0,
-            "uric_acid": 0,
-            "calcium_phosphate": 0,
-            "struvite": 0,
-            "cystine": 0,
-            "other": 0
+            "CaOx_Dihydrate": 0,
+            "CaOx_Monohydrate": 0,
+            "Phosphate": 0,
+            "Uric_Acid": 0
         }
         
         enriched_boxes = []
@@ -92,19 +90,9 @@ class CrystalPipeline:
             classification = self.classify(crop_np)
             cls_name = classification["class"]
             
-            # Map class names to standardized keys
-            if "CaOx" in cls_name:
-                counts["calcium_oxalate"] += 1
-            elif "Uric_Acid" in cls_name:
-                counts["uric_acid"] += 1
-            elif "Phosphate" in cls_name:
-                counts["calcium_phosphate"] += 1
-            elif "Struvite" in cls_name:
-                counts["struvite"] += 1
-            elif "Cystine" in cls_name:
-                counts["cystine"] += 1
-            else:
-                counts["other"] += 1
+            # Increment count for the classified type
+            if cls_name in counts:
+                counts[cls_name] += 1
             
             enriched_box = dict(det)
             enriched_box["subtype"] = cls_name

@@ -169,12 +169,21 @@ const AnalysisView = ({ image, analysis, patient }) => {
     riskColor = '#ff9100';
   }
 
+  // Only these 4 crystal types are detected by the ML model
+  const CRYSTAL_TYPES = ['CaOx_Dihydrate', 'CaOx_Monohydrate', 'Phosphate', 'Uric_Acid'];
+  const CRYSTAL_DISPLAY_NAMES = {
+    'CaOx_Dihydrate': 'CaOx Dihydrate',
+    'CaOx_Monohydrate': 'CaOx Monohydrate',
+    'Phosphate': 'Phosphate',
+    'Uric_Acid': 'Uric Acid',
+  };
+
   const particles = [
     {
       name: 'Crystals',
       count: crystalsData.total_count || 0,
-      types: crystalsData.subtype_summary && Object.keys(crystalsData.subtype_summary).length > 0
-        ? Object.entries(crystalsData.subtype_summary).map(([k, v]) => `${k}: ${v}`).join(' · ')
+      types: crystalsData.total_count > 0
+        ? CRYSTAL_TYPES.map(t => `${CRYSTAL_DISPLAY_NAMES[t]}: ${crystalsData.subtype_summary?.[t] || 0}`).join(' · ')
         : 'Not detected',
       color: '#ff9100',
       icon: <DiamondIcon sx={{ fontSize: 18 }} />,
@@ -462,49 +471,122 @@ const AnalysisView = ({ image, analysis, patient }) => {
                 Detected Particles
               </Typography>
 
-              {particles.map((p, i) => (
-                <Paper
-                  key={i}
-                  elevation={0}
-                  sx={{
-                    p: 2, mt: 1.5, borderRadius: 2.5,
-                    border: '1px solid', borderColor: alpha(p.color, 0.15),
-                    bgcolor: alpha(p.color, 0.03),
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                      bgcolor: alpha(p.color, 0.06),
-                      borderColor: alpha(p.color, 0.3),
-                      transform: 'translateX(4px)',
-                    }
-                  }}
-                >
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Box sx={{
-                        p: 0.7, borderRadius: 1.5,
-                        bgcolor: alpha(p.color, 0.12), color: p.color,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                      }}>
-                        {p.icon}
+              {particles.map((p, i) => {
+                const isDetected = p.count > 0;
+                const subtypeEntries = p.name === 'Crystals'
+                  ? CRYSTAL_TYPES.map(t => [CRYSTAL_DISPLAY_NAMES[t], crystalsData.subtype_summary?.[t] || 0])
+                  : p.name === 'Casts' && castsData.subtype_summary
+                    ? Object.entries(castsData.subtype_summary)
+                    : p.name === 'RBC' && rbcData.subtype_summary
+                      ? Object.entries(rbcData.subtype_summary)
+                      : [];
+
+                return (
+                  <Paper
+                    key={i}
+                    elevation={0}
+                    sx={{
+                      p: 2, mt: 1.5, borderRadius: 2.5,
+                      border: '1px solid',
+                      borderColor: '#e0e0e0',
+                      borderLeft: isDetected ? `4px solid ${p.color}` : '1px solid #e0e0e0',
+                      bgcolor: '#fff',
+                      transition: 'all 0.25s ease',
+                      '&:hover': {
+                        bgcolor: '#fafafa',
+                        borderColor: '#d0d0d0',
+                        transform: 'translateX(4px)',
+                      }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Box sx={{
+                          p: 0.8, borderRadius: 1.5,
+                          bgcolor: alpha(p.color, 0.12), color: p.color,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                          {p.icon}
+                        </Box>
+                        <Typography variant="body2" fontWeight={700} sx={{ fontSize: '0.95rem' }}>{p.name}</Typography>
                       </Box>
-                      <Box>
-                        <Typography variant="body2" fontWeight={700}>{p.name}</Typography>
-                        <Typography variant="caption" color="text.secondary">{p.types}</Typography>
+
+                      {/* Prominent Count Badge */}
+                      <Box sx={{
+                        display: 'flex', alignItems: 'center', gap: 1,
+                      }}>
+                        {isDetected ? (
+                          <Box sx={{
+                            display: 'flex', alignItems: 'center', gap: 0.8,
+                            bgcolor: p.color,
+                            color: '#fff',
+                            px: 1.8, py: 0.6,
+                            borderRadius: 2,
+                            boxShadow: `0 3px 12px ${alpha(p.color, 0.4)}`,
+                            minWidth: 70,
+                            justifyContent: 'center',
+                          }}>
+                            <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 }}>
+                              {p.count}
+                            </Typography>
+                            <Typography sx={{ fontWeight: 600, fontSize: '0.65rem', opacity: 0.9, lineHeight: 1, textTransform: 'uppercase' }}>
+                              found
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <Chip
+                            label="Clear"
+                            size="small"
+                            sx={{
+                              bgcolor: alpha('#66bb6a', 0.1),
+                              color: '#66bb6a',
+                              fontWeight: 700, fontSize: '0.72rem', height: 26,
+                              border: '1px solid', borderColor: alpha('#66bb6a', 0.25),
+                            }}
+                          />
+                        )}
                       </Box>
                     </Box>
-                    <Chip
-                      label={p.count > 0 ? `${p.count} found` : 'Clear'}
-                      size="small"
-                      sx={{
-                        bgcolor: p.count > 0 ? alpha(p.color, 0.1) : alpha('#66bb6a', 0.1),
-                        color: p.count > 0 ? p.color : '#66bb6a',
-                        fontWeight: 700, fontSize: '0.7rem', height: 22,
-                        border: '1px solid', borderColor: p.count > 0 ? alpha(p.color, 0.2) : alpha('#66bb6a', 0.2),
-                      }}
-                    />
-                  </Box>
-                </Paper>
-              ))}
+
+                    {/* Subtype breakdown tags */}
+                    {isDetected && subtypeEntries.length > 0 && (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.7, mt: 1.2, pl: 4.5 }}>
+                        {subtypeEntries.map(([subtype, count]) => (
+                          <Chip
+                            key={subtype}
+                            label={`${subtype.replace(/_/g, ' ')}: ${count}`}
+                            size="small"
+                            sx={{
+                              height: 22,
+                              fontSize: '0.68rem',
+                              fontWeight: 600,
+                              bgcolor: count > 0 ? alpha(p.color, 0.1) : alpha('#9e9e9e', 0.08),
+                              color: count > 0 ? p.color : 'text.secondary',
+                              border: '1px solid',
+                              borderColor: count > 0 ? alpha(p.color, 0.2) : alpha('#9e9e9e', 0.15),
+                              textTransform: 'capitalize',
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    )}
+
+                    {/* WBC / non-subtype detail text */}
+                    {isDetected && subtypeEntries.length === 0 && p.types && p.types !== 'Not detected' && (
+                      <Typography variant="caption" sx={{ display: 'block', mt: 0.8, pl: 4.5, color: p.color, fontWeight: 600 }}>
+                        {p.types}
+                      </Typography>
+                    )}
+
+                    {/* Not detected message */}
+                    {!isDetected && p.types === 'Not detected' && (
+                      <Typography variant="caption" sx={{ display: 'block', mt: 0.5, pl: 4.5, color: 'text.disabled', fontStyle: 'italic' }}>
+                        Not detected in sample
+                      </Typography>
+                    )}
+                  </Paper>
+                );
+              })}
             </Box>
 
           </Paper>
