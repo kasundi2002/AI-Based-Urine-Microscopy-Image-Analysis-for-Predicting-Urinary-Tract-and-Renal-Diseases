@@ -8,21 +8,18 @@ from particles.crystal.pipeline import CrystalPipeline
 from particles.wbc.detector import WBCDetector
 from particles.wbc.pipeline import WBCPipeline
 
+from particles.yeast.detector import YeastDetector
+from particles.yeast.pipeline import YeastPipeline
+
+from particles.bacteria.detector import EcoliDetector
+from particles.bacteria.pipeline import BacteriaPipeline
+
 def get_particles():
+    # the order defines processing sequence in main app
     return [
-        {
-            "name": "casts",
-            "detector": CastDetector(),
-            "pipeline": CastPipeline()
-        },
-        {
-            "name": "crystals",
-            "detector": CrystalDetector(),
-            "pipeline": CrystalPipeline()
-        },
-        {
-            "name": "wbc",
-            "detector": WBCDetector(),
-            "pipeline": WBCPipeline()
-        }
+        {"name": "casts", "detector": CastDetector(), "pipeline": CastPipeline()},
+        {"name": "crystals", "detector": CrystalDetector(), "pipeline": CrystalPipeline()},
+        {"name": "wbc", "detector": WBCDetector(), "pipeline": WBCPipeline()},
+        {"name": "yeast", "detector": YeastDetector(), "pipeline": YeastPipeline()},
+        {"name": "ecoli", "detector": EcoliDetector(), "pipeline": BacteriaPipeline()},
     ]
