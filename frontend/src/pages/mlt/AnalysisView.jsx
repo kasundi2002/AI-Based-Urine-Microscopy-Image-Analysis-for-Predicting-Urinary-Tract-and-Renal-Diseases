@@ -136,6 +136,10 @@ const AnalysisView = ({ image, analysis, patient, onNewAnalysis, onReAnalysis })
         } else if (particleName === "wbc") {
           ctx.strokeStyle = "green";
           ctx.lineWidth = 2;
+        } else if (particleName === "yeast") {
+          console.log("Yeast boxes:", analysis?.yeast);
+          ctx.strokeStyle = "orange";
+          ctx.lineWidth = 2;
         } else if (particleName === "rbc") {
           console.log("Drawing RBC box:", box);
           ctx.strokeStyle = "purple";
@@ -150,7 +154,7 @@ const AnalysisView = ({ image, analysis, patient, onNewAnalysis, onReAnalysis })
         ctx.font = "14px Arial";
         ctx.fillStyle = ctx.strokeStyle;
         ctx.fillText(
-          box.subtype || particleName,
+          particleName === "yeast" ? "Yeast" : (box.subtype || particleName),
           x1,
           y1 - 5
         );
@@ -168,8 +172,9 @@ const AnalysisView = ({ image, analysis, patient, onNewAnalysis, onReAnalysis })
   const castsData = analysis?.casts || {};
   const wbcData = analysis?.wbc || {};
   const rbcData = analysis?.rbc || {};
+  const yeastData = analysis?.yeast || {};
 
-  const totalObjects = (crystalsData.total_count || 0) + (castsData.total_count || 0) + (wbcData.total_count || 0) + (rbcData.total_count || 0);
+  const totalObjects = (crystalsData.total_count || 0) + (castsData.total_count || 0) + (wbcData.total_count || 0) + (rbcData.total_count || 0) + (yeastData.total_count || 0);
 
   let riskLevel = 'Low Risk';
   let riskColor = '#66bb6a';
@@ -177,11 +182,12 @@ const AnalysisView = ({ image, analysis, patient, onNewAnalysis, onReAnalysis })
   const castRisk = castsData.risk_assessment?.level;
   const wbcRisk = wbcData.risk_assessment?.level;
   const rbcRisk = rbcData.risk_assessment?.level;
+  const yeastRisk = yeastData.risk_assessment?.level;
 
-  if (cRisk === 'High' || castRisk === 'High Risk' || wbcRisk === 'UTI Positive' || rbcRisk === 'High Dysmorphic Presence') {
+  if (cRisk === 'High' || castRisk === 'High Risk' || wbcRisk === 'UTI Positive' || rbcRisk === 'High Dysmorphic Presence' || yeastRisk === 'Possible Yeast Infection') {
     riskLevel = 'High Risk';
     riskColor = '#ef5350';
-  } else if (cRisk === 'Moderate' || castRisk === 'Moderate Risk' || rbcRisk === 'Moderate Dysmorphic Presence') {
+  } else if (cRisk === 'Moderate' || castRisk === 'Moderate Risk' || rbcRisk === 'Moderate Dysmorphic Presence' || yeastRisk === 'Low Yeast Presence') {
     riskLevel = 'Moderate Risk';
     riskColor = '#ff9100';
   }
@@ -234,6 +240,14 @@ const AnalysisView = ({ image, analysis, patient, onNewAnalysis, onReAnalysis })
       icon: <BloodtypeIcon sx={{ fontSize: 18 }} />,
       confidence: rbcData.total_count > 0 ? 98 : 99
     },
+    {
+      name: 'Yeast',
+      count: yeastData.total_count || 0,
+      types: yeastData.total_count > 0 ? yeastRisk : 'Not detected',
+      color: '#ff9800',
+      icon: <ScienceIcon sx={{ fontSize: 18 }} />,
+      confidence: yeastData.total_count > 0 ? 95 : 99
+    },
     { name: 'Bacteria', count: 0, types: 'N/A (ML module pending)', color: '#66bb6a', icon: <BugReportIcon sx={{ fontSize: 18 }} />, confidence: 100 },
   ];
 
@@ -246,6 +260,7 @@ const AnalysisView = ({ image, analysis, patient, onNewAnalysis, onReAnalysis })
       findings: {
         wbc: wbcData.total_count || 0,
         rbc: rbcData.total_count || 0,
+        yeast: yeastData.total_count || 0,
         crystals: crystalsData.total_count > 0 ? 'Present' : 'Absent',
         bacteria: 'None',
         cast: castsData.total_count > 0 ? 'Present' : 'Absent',

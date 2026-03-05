@@ -7,6 +7,10 @@ from particles.crystal.detector import CrystalDetector
 from particles.crystal.pipeline import CrystalPipeline
 from particles.wbc.detector import WBCDetector
 from particles.wbc.pipeline import WBCPipeline
+from particles.rbc.detector import RBCDetector
+from particles.rbc.pipeline import RBCPipeline
+from particles.yeast.detector import YeastDetector
+from particles.yeast.pipeline import YeastPipeline
 
 def get_particles():
     return [
@@ -24,5 +28,15 @@ def get_particles():
             "name": "wbc",
             "detector": WBCDetector(),
             "pipeline": WBCPipeline()
+        },
+        {
+            "name": "rbc",
+            "detector": RBCDetector(),
+            "pipeline": RBCPipeline()
+        },
+        {
+            "name": "yeast",
+            "detector": YeastDetector(),
+            "pipeline": YeastPipeline()
         }
     ]
