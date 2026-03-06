@@ -69,9 +69,9 @@ export const uploadImage = async (req, res, next) => {
 // @access  Private (MLT)
 export const submitReport = async (req, res, next) => {
     try {
-        const { patientId, imageUrl, analysis, riskLevel } = req.body;
+        const { patientId, imageUrl, analysis, riskLevel, chemicalParameters } = req.body;
 
-        if (!patientId || !imageUrl || !analysis) {
+        if (!patientId || (!imageUrl && !analysis && !chemicalParameters)) {
             return res.status(400).json({ success: false, error: 'Missing required report data' });
         }
 
@@ -90,6 +90,7 @@ export const submitReport = async (req, res, next) => {
             uploadedBy: req.user.id,
             imageUrl,
             analysis,
+            chemicalParameters,
             status: 'Pending Verification'
         });
 

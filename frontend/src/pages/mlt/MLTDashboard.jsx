@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import StatsDashboard from './StatsDashboard';
 import PatientQueue from './PatientQueue';
 import AnalysisWorkflow from './AnalysisWorkflow';
+import ResultsPage from './ResultsPage';
 import microscopyImage from '../../assets/c5.jpg';
 
 const MLTDashboard = () => {
@@ -22,6 +23,11 @@ const MLTDashboard = () => {
     setView('analysis');
   };
 
+  const handleViewReport = (patient) => {
+    setSelectedPatient(patient);
+    setView('analysis');
+  };
+
   return (
     <Box>
       {currentView === 'dashboard' && (
@@ -37,14 +43,11 @@ const MLTDashboard = () => {
       )}
 
       {currentView === 'results' && (
-         <Paper sx={{ p: 4, textAlign: 'center' }}>
-            <Typography variant="h6" color="text.secondary">
-                Results Module - Coming Soon
-            </Typography>
-        </Paper>
+        <ResultsPage onViewReport={handleViewReport} />
       )}
     </Box>
   );
 };
 
 export default MLTDashboard;
+

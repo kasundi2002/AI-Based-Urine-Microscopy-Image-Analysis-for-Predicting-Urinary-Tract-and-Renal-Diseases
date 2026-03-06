@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import Patient from '../models/Patient.js';
+import Report from '../models/Report.js';
 import { sendAccessEmail } from '../utils/emailService.js';
 import { generateOTP, sendOTP } from '../utils/otpService.js';
 
@@ -20,6 +21,42 @@ const hashToken = (token) =>
     crypto.createHash('sha256').update(token).digest('hex');
 
 // ─── Controllers ───────────────────────────────────────────────────────────
+
+/**
+ * @desc  Get the authenticated patient's latest report + patient info
+ * @route GET /api/patient-access/my-report
+ * @access Private (Patient JWT via protectPatient)
+ */
+export const getMyReport = async (req, res, next) => {
+    try {
+        const patient = await Patient.findById(req.patientId)
+            .select('-otp -otpExpiry -accessToken -accessTokenExpiry');
+
+        if (!patient) {
+            return res.status(404).json({ success: false, error: 'Patient not found' });
+        }
+
+        // Get the latest report for this patient
+        const reports = await Report.find({ patientId: patient._id })
+            .sort({ createdAt: -1 })
+            .limit(5);
+
+        res.status(200).json({
+            success: true,
+            patient: {
+                id: patient._id,
+                patientId: patient.patientId,
+                name: patient.name,
+                age: patient.age,
+                gender: patient.gender,
+                status: patient.status,
+            },
+            reports: reports || []
+        });
+    } catch (error) {
+        next(error);
+    }
+};
 
 /**
  * @desc  MLT triggers a secure access email to a registered patient

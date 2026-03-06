@@ -189,6 +189,86 @@ const generateReport = (report, patientName = 'John Doe') => {
   y += 10;
 
   // ════════════════════════════════════════════════
+  //  CHEMICAL ANALYSIS TABLE
+  // ════════════════════════════════════════════════
+  if (report.chemicalParameters) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(...navy);
+    doc.text('Chemical Analysis (Urine Full Report)', margin, y);
+    y += 6;
+
+    // Table header
+    doc.setFillColor(...navy);
+    doc.roundedRect(tableX, y, contentWidth, 10, 2, 2, 'F');
+    doc.setTextColor(...white);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text('Parameter', tableX + 6, y + 7);
+    doc.text('Result', tableX + colWidths[0] + 6, y + 7);
+    doc.text('Status', tableX + colWidths[0] + colWidths[1] + 6, y + 7);
+    y += 10;
+
+    const chem = report.chemicalParameters;
+    const chemRows = [
+      { param: 'Colour', value: chem.colour || '—' },
+      { param: 'Appearance', value: chem.appearance || '—' },
+      { param: 'S.G. (Refractometer)', value: chem.specificGravity ? String(chem.specificGravity) : '—' },
+      { param: 'pH', value: chem.pH ? String(chem.pH) : '—' },
+      { param: 'Protein', value: chem.protein || '—' },
+      { param: 'Glucose', value: chem.glucose || '—' },
+      { param: 'Ketone Bodies', value: chem.ketoneBodies || '—' },
+      { param: 'Bilirubin', value: chem.bilirubin || '—' },
+      { param: 'Nitrite', value: chem.nitrite || '—' },
+      { param: 'Urobilinogen', value: chem.urobilinogen || '—' },
+      { param: 'Blood (Occult)', value: chem.blood || '—' },
+    ];
+
+    const isAbnormal = (param, val) => {
+      if (['Protein', 'Glucose', 'Ketone Bodies', 'Bilirubin', 'Blood (Occult)'].includes(param)) return val !== 'Nil' && val !== '—';
+      if (param === 'Nitrite') return val === 'Positive';
+      if (param === 'Urobilinogen') return val === 'Elevated';
+      return false;
+    };
+
+    const chemTableStartY = y;
+    chemRows.forEach((row, i) => {
+      // Check if we need a new page
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
+      const fillColor = i % 2 === 0 ? [250, 251, 253] : [255, 255, 255];
+      doc.setFillColor(...fillColor);
+      doc.rect(tableX, y, contentWidth, 10, 'F');
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...darkText);
+      doc.text(row.param, tableX + 6, y + 7);
+
+      const abnormal = isAbnormal(row.param, row.value);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(abnormal ? 239 : darkText[0], abnormal ? 83 : darkText[1], abnormal ? 80 : darkText[2]);
+      doc.text(row.value, tableX + colWidths[0] + 6, y + 7);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(abnormal ? 239 : 102, abnormal ? 83 : 187, abnormal ? 80 : 106);
+      doc.text(abnormal ? 'Abnormal' : 'Normal', tableX + colWidths[0] + colWidths[1] + 6, y + 7);
+      y += 10;
+    });
+
+    // Table border
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.3);
+    const chemTableHeight = y - chemTableStartY;
+    doc.roundedRect(tableX, chemTableStartY, contentWidth, chemTableHeight, 2, 2, 'S');
+
+    y += 10;
+  }
+
+  // ════════════════════════════════════════════════
   //  DOCTOR'S RECOMMENDATIONS
   // ════════════════════════════════════════════════
   doc.setFont('helvetica', 'bold');

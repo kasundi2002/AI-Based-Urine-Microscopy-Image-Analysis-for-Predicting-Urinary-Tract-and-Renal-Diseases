@@ -119,6 +119,26 @@ export const api = {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Failed to verify report');
         return data.data;
+    },
+
+    getAllReports: async () => {
+        const response = await fetch(`${BACKEND_URL}/reports`, {
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to fetch reports');
+        return data.data;
+    },
+
+    sendAccessLink: async (patientId) => {
+        const response = await fetch(`${BACKEND_URL}/patient-access/send-link`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ patientId })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to send access link');
+        return data;
     }
 };
 

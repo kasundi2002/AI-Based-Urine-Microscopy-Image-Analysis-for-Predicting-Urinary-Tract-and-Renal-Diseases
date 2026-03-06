@@ -16,11 +16,13 @@ const reportSchema = new mongoose.Schema({
         ref: 'User', // Clinician handling the review
     },
     imageUrl: {
-        type: String, // Path or URL to images
-        required: true
+        type: String // Path or URL to images
     },
     analysis: {
         type: mongoose.Schema.Types.Mixed // Allows nested ML payload structure without strict validation
+    },
+    chemicalParameters: {
+        type: mongoose.Schema.Types.Mixed // Chemical urine test results entered by MLT
     },
     status: {
         type: String,

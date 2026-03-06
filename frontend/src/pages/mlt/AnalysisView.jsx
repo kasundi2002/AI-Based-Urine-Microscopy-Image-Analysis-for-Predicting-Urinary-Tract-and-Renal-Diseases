@@ -75,7 +75,7 @@ const StatChip = styled(Paper)(({ theme }) => ({
   }
 }));
 
-const AnalysisView = ({ image, analysis, patient, onNewAnalysis, onReAnalysis }) => {
+const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnalysis, onReAnalysis, onAddChemicalParams }) => {
   const { submitLabResult } = useLabData();
   const [submitted, setSubmitted] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -262,6 +262,7 @@ const AnalysisView = ({ image, analysis, patient, onNewAnalysis, onReAnalysis })
           patientId: patient._id,
           imageUrl: relativeImageUrl,
           analysis: analysis,
+          chemicalParameters: chemicalParameters,
           riskLevel: riskLevel
         });
       }
@@ -340,6 +341,24 @@ const AnalysisView = ({ image, analysis, patient, onNewAnalysis, onReAnalysis })
           >
             Re-Analyze
           </Button>
+          {onAddChemicalParams && !chemicalParameters && (
+            <Button
+              variant="outlined"
+              startIcon={<ScienceIcon />}
+              onClick={onAddChemicalParams}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                borderRadius: 2,
+                bgcolor: alpha('#4caf50', 0.07),
+                borderColor: alpha('#4caf50', 0.3),
+                color: '#4caf50',
+                '&:hover': { borderColor: '#4caf50', bgcolor: alpha('#4caf50', 0.04) }
+              }}
+            >
+              Add Chemical Params
+            </Button>
+          )}
           <Button
             variant="contained"
             disabled={submitted}
@@ -658,6 +677,80 @@ const AnalysisView = ({ image, analysis, patient, onNewAnalysis, onReAnalysis })
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Chemical Analysis Section */}
+      {chemicalParameters && (
+        <Paper
+          elevation={0}
+          sx={{
+            mt: 2, borderRadius: 3, overflow: 'hidden',
+            border: '1px solid', borderColor: 'divider',
+          }}
+        >
+          <Box sx={{
+            px: 3, py: 2,
+            background: 'linear-gradient(135deg, #0f172a, #1e3a5f)',
+            color: 'white'
+          }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box>
+                <Typography variant="subtitle1" fontWeight={700}>Chemical Analysis Report</Typography>
+                <Typography variant="caption" sx={{ opacity: 0.7 }}>Urine full report — manual entry by MLT</Typography>
+              </Box>
+              <Chip
+                label="Manual Entry"
+                size="small"
+                sx={{
+                  bgcolor: alpha('#ff9800', 0.2), color: '#ffcc80', fontWeight: 700, fontSize: '0.7rem',
+                  border: '1px solid', borderColor: alpha('#ff9800', 0.3)
+                }}
+              />
+            </Box>
+          </Box>
+          <Box sx={{ p: 0 }}>
+            <Table size="small">
+              <TableBody>
+                {[
+                  { label: 'Colour', value: chemicalParameters.colour },
+                  { label: 'Appearance', value: chemicalParameters.appearance },
+                  { label: 'S.G. (Refractometer)', value: chemicalParameters.specificGravity },
+                  { label: 'pH', value: chemicalParameters.pH },
+                  { label: 'Protein', value: chemicalParameters.protein },
+                  { label: 'Glucose', value: chemicalParameters.glucose },
+                  { label: 'Ketone Bodies', value: chemicalParameters.ketoneBodies },
+                  { label: 'Bilirubin', value: chemicalParameters.bilirubin },
+                  { label: 'Nitrite', value: chemicalParameters.nitrite },
+                  { label: 'Urobilinogen', value: chemicalParameters.urobilinogen },
+                  { label: 'Blood (Occult)', value: chemicalParameters.blood },
+                ].map((row, i) => {
+                  const isAbnormal = (() => {
+                    const v = row.value;
+                    if (row.label === 'Protein' || row.label === 'Glucose' || row.label === 'Ketone Bodies' || row.label === 'Bilirubin' || row.label.includes('Blood')) return v !== 'Nil';
+                    if (row.label === 'Nitrite') return v === 'Positive';
+                    if (row.label === 'Urobilinogen') return v === 'Elevated';
+                    if (row.label === 'pH') return v && (parseFloat(v) < 5.0 || parseFloat(v) > 7.5);
+                    if (row.label.includes('S.G.')) return v && (parseFloat(v) < 1.005 || parseFloat(v) > 1.030);
+                    if (row.label === 'Colour') return !['Pale Yellow', 'Yellow'].includes(v);
+                    if (row.label === 'Appearance') return v !== 'Clear';
+                    return false;
+                  })();
+                  return (
+                    <TableRow key={i} sx={{ '&:last-child td': { borderBottom: 0 }, bgcolor: isAbnormal ? alpha('#ef5350', 0.04) : 'transparent' }}>
+                      <TableCell sx={{ pl: 3, py: 1.2, width: '45%', fontWeight: 600, fontSize: '0.82rem', color: 'text.secondary' }}>{row.label}</TableCell>
+                      <TableCell sx={{ py: 1.2, fontWeight: 700, fontSize: '0.85rem', color: isAbnormal ? '#ef5350' : 'text.primary' }}>
+                        {row.value || '—'}
+                        {isAbnormal && (
+                          <Chip label="Abnormal" size="small" sx={{ ml: 1, height: 18, fontSize: '0.6rem', fontWeight: 700, bgcolor: alpha('#ef5350', 0.1), color: '#ef5350' }} />
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </Box>
+        </Paper>
+      )}
 
       {/* Success Snackbar */}
       <Snackbar
