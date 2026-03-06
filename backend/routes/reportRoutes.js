@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
-import { getReports, uploadImage, getReport, verifyReport } from '../controllers/reportController.js';
+import { getReports, uploadImage, getReport, verifyReport, submitReport } from '../controllers/reportController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -42,6 +42,9 @@ router.route('/')
 // Using single 'image' to match possible frontend implementation
 router.route('/upload')
     .post(protect, authorize('MLT'), upload.single('image'), uploadImage);
+
+router.route('/submit')
+    .post(protect, authorize('MLT'), submitReport);
 
 router.route('/:id')
     .get(protect, getReport);

@@ -60,3 +60,20 @@ export const createPatient = async (req, res, next) => {
         next(error);
     }
 };
+
+// @desc    Delete patient
+// @route   DELETE /api/patients/:id
+// @access  Private (MLT)
+export const deletePatient = async (req, res, next) => {
+    try {
+        const patient = await Patient.findByIdAndDelete(req.params.id);
+
+        if (!patient) {
+            return res.status(404).json({ success: false, error: 'Patient not found' });
+        }
+
+        res.status(200).json({ success: true, data: {} });
+    } catch (error) {
+        next(error);
+    }
+};

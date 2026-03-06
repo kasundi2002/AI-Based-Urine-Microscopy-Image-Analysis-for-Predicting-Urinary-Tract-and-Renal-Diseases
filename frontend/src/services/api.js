@@ -50,6 +50,16 @@ export const api = {
         return data.data; // return created patient
     },
 
+    deletePatient: async (patientId) => {
+        const response = await fetch(`${BACKEND_URL}/patients/${patientId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to delete patient');
+        return data;
+    },
+
     uploadImage: async (file, patientId) => {
         const formData = new FormData();
         formData.append('image', file);
@@ -68,6 +78,26 @@ export const api = {
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Failed to analyze image');
+        return data.data;
+    },
+
+    submitReport: async (reportData) => {
+        const response = await fetch(`${BACKEND_URL}/reports/submit`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(reportData)
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to submit report');
+        return data.data;
+    },
+
+    getReportsByPatient: async (patientId) => {
+        const response = await fetch(`${BACKEND_URL}/reports?patientId=${patientId}`, {
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to fetch reports');
         return data.data;
     },
 

@@ -79,8 +79,27 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
     if (preSelectedPatient) {
       setSelectedPatient(preSelectedPatient);
       if (preSelectedPatient.status === 'Ready for Review' || preSelectedPatient.status === 'Completed') {
-        setUploadedImage(microscopyImage);
-        setAnalysisResult({ wbc: 5, rbc: 2, crystals: 'Calcium Oxalate', risk: 45 });
+        // Fetch real report from database
+        const fetchReport = async () => {
+          try {
+            const reports = await api.getReportsByPatient(preSelectedPatient._id);
+            if (reports && reports.length > 0) {
+              const latestReport = reports[0]; // Already sorted by createdAt desc
+              const fullImageUrl = `http://localhost:5000${latestReport.imageUrl}`;
+              setUploadedImage(fullImageUrl);
+              setAnalysisResult(latestReport.analysis);
+            } else {
+              // No report found, reset
+              setAnalysisResult(null);
+              setUploadedImage(null);
+            }
+          } catch (error) {
+            console.error('Failed to fetch patient report:', error);
+            setAnalysisResult(null);
+            setUploadedImage(null);
+          }
+        };
+        fetchReport();
       } else {
         setAnalysisResult(null);
         setUploadedImage(null);
@@ -218,10 +237,32 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
 
             <Box sx={{ p: 3 }}>
               <Autocomplete
-                options={patients}
+                options={patients.filter(p => p.status === 'Awaiting Analysis')}
                 getOptionLabel={getOptionLabel}
                 value={selectedPatient}
                 onChange={(event, newValue) => setSelectedPatient(newValue)}
+                renderOption={(props, option) => {
+                  const { key, ...rest } = props;
+                  return (
+                    <Box component="li" key={key} {...rest} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1 }}>
+                      <Avatar sx={{ width: 30, height: 30, bgcolor: alpha('#00bcd4', 0.1), color: '#00bcd4', fontSize: '0.75rem', fontWeight: 700 }}>
+                        {option.name?.charAt(0)}
+                      </Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="body2" fontWeight={600}>{option.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">ID: {option.patientId}</Typography>
+                      </Box>
+                      <Chip
+                        label={option.status}
+                        size="small"
+                        sx={{
+                          height: 20, fontSize: '0.6rem', fontWeight: 600,
+                          bgcolor: alpha('#ff9800', 0.1), color: '#e65100',
+                        }}
+                      />
+                    </Box>
+                  );
+                }}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -231,6 +272,7 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                   />
                 )}
+                noOptionsText="No patients awaiting analysis"
                 sx={{ mb: 3 }}
               />
 

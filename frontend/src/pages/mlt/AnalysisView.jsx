@@ -20,6 +20,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import SpeedIcon from '@mui/icons-material/Speed';
 import { useLabData } from '../../context/LabDataContext';
+import { api } from '../../services/api';
 
 const ImageContainer = styled(Box)(({ theme }) => ({
   position: 'relative',
@@ -253,25 +254,40 @@ const AnalysisView = ({ image, analysis, patient, onNewAnalysis, onReAnalysis })
 
   const clinicalSuggestion = crystalsData.risk_assessment?.clinical_suggestion || castsData.risk_assessment?.level || "No significant abnormalities detected in Casts or Crystals.";
 
-  const handleSubmitReport = () => {
-    submitLabResult({
-      patientId: patient?.patientId || 'PAT-2023-001',
-      patientName: patient?.name || 'John Doe',
-      findings: {
-        wbc: wbcData.total_count || 0,
-        rbc: rbcData.total_count || 0,
-        yeast: yeastData.total_count || 0,
-        crystals: crystalsData.total_count > 0 ? 'Present' : 'Absent',
-        bacteria: 'None',
-        cast: castsData.total_count > 0 ? 'Present' : 'Absent',
-      },
-      aiRiskScore: riskLevel === 'High Risk' ? 85 : riskLevel === 'Moderate Risk' ? 55 : 15,
-      image: image,
-      mltName: 'Sarah Tech',
-    });
+  const handleSubmitReport = async () => {
+    try {
+      if (patient?._id) {
+        const relativeImageUrl = image ? image.replace('http://localhost:5000', '') : '';
+        await api.submitReport({
+          patientId: patient._id,
+          imageUrl: relativeImageUrl,
+          analysis: analysis,
+          riskLevel: riskLevel
+        });
+      }
 
-    setSubmitted(true);
-    setShowSuccess(true);
+      submitLabResult({
+        patientId: patient?.patientId || 'PAT-2023-001',
+        patientName: patient?.name || 'John Doe',
+        findings: {
+          wbc: wbcData.total_count || 0,
+          rbc: rbcData.total_count || 0,
+          yeast: yeastData.total_count || 0,
+          crystals: crystalsData.total_count > 0 ? 'Present' : 'Absent',
+          bacteria: 'None',
+          cast: castsData.total_count > 0 ? 'Present' : 'Absent',
+        },
+        aiRiskScore: riskLevel === 'High Risk' ? 85 : riskLevel === 'Moderate Risk' ? 55 : 15,
+        image: image,
+        mltName: 'Sarah Tech',
+      });
+
+      setSubmitted(true);
+      setShowSuccess(true);
+    } catch (error) {
+      console.error('Failed to save real report:', error);
+      alert('Failed to save report to database. Please check connection.');
+    }
   };
 
   return (

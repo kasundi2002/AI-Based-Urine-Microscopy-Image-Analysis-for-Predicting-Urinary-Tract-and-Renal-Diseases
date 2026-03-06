@@ -10,6 +10,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import DescriptionIcon from '@mui/icons-material/Description';
 import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
@@ -30,6 +31,9 @@ const PatientQueue = ({ onSelectPatient }) => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showEmailSent, setShowEmailSent] = useState(false);
   const [errors, setErrors] = useState({});
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [patientToDelete, setPatientToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
 
   useEffect(() => {
@@ -52,6 +56,7 @@ const PatientQueue = ({ onSelectPatient }) => {
   const getRiskConfig = (risk) => {
     switch (risk) {
       case 'High': return { color: '#ef5350', bgcolor: alpha('#ef5350', 0.08), border: alpha('#ef5350', 0.2) };
+      case 'Moderate': return { color: '#ff9100', bgcolor: alpha('#ff9100', 0.08), border: alpha('#ff9100', 0.2) };
       case 'Normal': return { color: '#66bb6a', bgcolor: alpha('#66bb6a', 0.08), border: alpha('#66bb6a', 0.2) };
       case 'Pending': return { color: '#00bcd4', bgcolor: alpha('#00bcd4', 0.08), border: alpha('#00bcd4', 0.2) };
       default: return { color: '#9e9e9e', bgcolor: alpha('#9e9e9e', 0.08), border: alpha('#9e9e9e', 0.2) };
@@ -118,6 +123,30 @@ const PatientQueue = ({ onSelectPatient }) => {
     }
   };
 
+  const handleOpenDelete = (patient) => {
+    setPatientToDelete(patient);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleCloseDelete = () => {
+    setDeleteDialogOpen(false);
+    setPatientToDelete(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!patientToDelete) return;
+    setDeleting(true);
+    try {
+      await api.deletePatient(patientToDelete._id);
+      setPatients(prev => prev.filter(p => p._id !== patientToDelete._id));
+      handleCloseDelete();
+    } catch (error) {
+      console.error('Failed to delete patient', error);
+      alert('Failed to delete patient');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <Box sx={{ animation: 'fadeIn 0.4s ease-out' }}>
@@ -287,6 +316,15 @@ const PatientQueue = ({ onSelectPatient }) => {
                             <EditIcon sx={{ fontSize: 18 }} />
                           </IconButton>
                         </Tooltip>
+
+                        <Tooltip title="Delete">
+                          <IconButton size="small" onClick={() => handleOpenDelete(patient)} sx={{
+                            color: 'text.secondary',
+                            '&:hover': { color: '#ef5350', bgcolor: alpha('#ef5350', 0.08) }
+                          }}>
+                            <DeleteIcon sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
                       </Box>
                     </TableCell>
                   </TableRow>
@@ -437,6 +475,24 @@ const PatientQueue = ({ onSelectPatient }) => {
             }}
           >
             {saving ? 'Saving...' : 'Register Patient'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={handleCloseDelete} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#ef5350' }}>
+          <DeleteIcon /> Confirm Deletion
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            Are you sure you want to delete patient <strong>{patientToDelete?.name}</strong> (ID: {patientToDelete?.patientId})? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCloseDelete} color="inherit">Cancel</Button>
+          <Button onClick={handleDeleteConfirm} variant="contained" color="error" disabled={deleting}>
+            {deleting ? 'Deleting...' : 'Delete'}
           </Button>
         </DialogActions>
       </Dialog>

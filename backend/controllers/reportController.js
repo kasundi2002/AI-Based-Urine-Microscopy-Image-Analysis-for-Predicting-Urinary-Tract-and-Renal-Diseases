@@ -9,7 +9,13 @@ import FormData from 'form-data';
 // @access  Private
 export const getReports = async (req, res, next) => {
     try {
-        const reports = await Report.find()
+        let query = {};
+        if (req.query.patientId) {
+            query.patientId = req.query.patientId;
+        }
+        
+        const reports = await Report.find(query)
+            .sort({ createdAt: -1 })
             .populate('patientId', 'name patientId')
             .populate('uploadedBy', 'name');
 
@@ -19,7 +25,7 @@ export const getReports = async (req, res, next) => {
     }
 };
 
-// @desc    Upload an image & Create report analyzing findings
+// @desc    Upload an image & get analysis
 // @route   POST /api/reports/upload
 // @access  Private (MLT)
 export const uploadImage = async (req, res, next) => {
@@ -46,14 +52,44 @@ export const uploadImage = async (req, res, next) => {
             return res.status(500).json({ success: false, error: 'ML Core server not reachable' });
         }
 
-        // Update patient status to Ready for Review
-        await Patient.findByIdAndUpdate(patientId, { status: 'Ready for Review' });
+        res.status(200).json({ 
+            success: true, 
+            data: {
+                imageUrl: `/uploads/${req.file.filename}`,
+                analysis: mlResponse.data
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Submit final report and save to DB
+// @route   POST /api/reports/submit
+// @access  Private (MLT)
+export const submitReport = async (req, res, next) => {
+    try {
+        const { patientId, imageUrl, analysis, riskLevel } = req.body;
+
+        if (!patientId || !imageUrl || !analysis) {
+            return res.status(400).json({ success: false, error: 'Missing required report data' });
+        }
+
+        let mappedRisk = 'Pending';
+        if (riskLevel === 'High Risk') mappedRisk = 'High';
+        else if (riskLevel === 'Moderate Risk') mappedRisk = 'Moderate';
+        else if (riskLevel === 'Low Risk') mappedRisk = 'Low';
+
+        await Patient.findByIdAndUpdate(patientId, { 
+            status: 'Ready for Review',
+            riskAssessment: mappedRisk
+        });
 
         const report = await Report.create({
             patientId,
             uploadedBy: req.user.id,
-            imageUrl: `/uploads/${req.file.filename}`, // From multer
-            analysis: mlResponse.data,
+            imageUrl,
+            analysis,
             status: 'Pending Verification'
         });
 

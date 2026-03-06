@@ -25,7 +25,7 @@ const patientSchema = new mongoose.Schema({
     },
     riskAssessment: {
         type: String,
-        enum: ['Normal', 'Pending', 'High', 'Low', 'Critical'],
+        enum: ['Normal', 'Pending', 'High', 'Low', 'Critical', 'Moderate'],
         default: 'Pending'
     },
     email: {
