@@ -118,6 +118,7 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
 
     Object.entries(analysis).forEach(([particleName, data]) => {
       if (!data || !data.detected) return;
+      if (particleName === "yeast") return; // hide yeast boundary boxes on canvas
 
       data.boxes.forEach(box => {
         const [rawX1, rawY1, rawX2, rawY2] = box.bbox;
@@ -129,24 +130,25 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
         const y2 = rawY2 * scaleY;
 
         if (particleName === "casts") {
-          ctx.strokeStyle = "red";
+          ctx.strokeStyle = "green"; // user request: green
           ctx.lineWidth = 2;
         } else if (particleName === "crystals") {
-          ctx.strokeStyle = "blue";
+          ctx.strokeStyle = "blue"; // user request: blue
           ctx.lineWidth = 2;
         } else if (particleName === "wbc") {
-          ctx.strokeStyle = "green";
-          ctx.lineWidth = 2;
-        } else if (particleName === "yeast") {
-          console.log("Yeast boxes:", analysis?.yeast);
-          ctx.strokeStyle = "orange";
+          ctx.strokeStyle = "purple"; // user request: purple
           ctx.lineWidth = 2;
         } else if (particleName === "rbc") {
-          console.log("Drawing RBC box:", box);
-          ctx.strokeStyle = "purple";
+          ctx.strokeStyle = "red"; // user request: red
           ctx.lineWidth = 1;
+        } else if (particleName === "yeast") {
+          ctx.strokeStyle = "#ff9800"; // orange a good distinct color for yeast
+          ctx.lineWidth = 2;
+        } else if (particleName === "bacteria") {
+          ctx.strokeStyle = "cyan"; // cyan a distinct color for bacteria
+          ctx.lineWidth = 2;
         } else {
-          ctx.strokeStyle = "cyan";
+          ctx.strokeStyle = "white";
           ctx.lineWidth = 2;
         }
 
@@ -154,8 +156,21 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
 
         ctx.font = "14px Arial";
         ctx.fillStyle = ctx.strokeStyle;
+
+        let labelText = box.subtype || particleName;
+        if (particleName === "casts" && box.subtype) {
+          // Format specific Cast subtitles properly adding suffixes
+          const st = box.subtype.trim();
+          const upperSt = st.toUpperCase();
+          if (upperSt === "WBC" || upperSt === "RBC") {
+            labelText = `${upperSt} Cast`;
+          } else {
+            labelText = `${st.charAt(0).toUpperCase() + st.slice(1)} Cast`;
+          }
+        }
+
         ctx.fillText(
-          particleName === "yeast" ? "Yeast" : (box.subtype || particleName),
+          labelText,
           x1,
           y1 - 5
         );
@@ -209,7 +224,7 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
       types: crystalsData.total_count > 0
         ? CRYSTAL_TYPES.map(t => `${CRYSTAL_DISPLAY_NAMES[t]}: ${crystalsData.subtype_summary?.[t] || 0}`).join(' · ')
         : 'Not detected',
-      color: '#ff9100',
+      color: '#2196f3', // blue
       icon: <DiamondIcon sx={{ fontSize: 18 }} />,
       confidence: crystalsData.total_count > 0 ? 96 : 99
     },
@@ -219,7 +234,7 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
       types: castsData.subtype_summary && Object.keys(castsData.subtype_summary).length > 0
         ? Object.entries(castsData.subtype_summary).map(([k, v]) => `${k}: ${v}`).join(' · ')
         : 'Not detected',
-      color: '#ab47bc',
+      color: '#4caf50', // green
       icon: <BiotechIcon sx={{ fontSize: 18 }} />,
       confidence: castsData.total_count > 0 ? 92 : 99
     },
@@ -227,7 +242,7 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
       name: 'WBC',
       count: wbcData.total_count || 0,
       types: wbcData.total_count > 0 ? wbcRisk : 'Not detected',
-      color: '#00bcd4',
+      color: '#9c27b0', // purple
       icon: <ShieldIcon sx={{ fontSize: 18 }} />,
       confidence: wbcData.total_count > 0 ? 94 : 99
     },
@@ -237,7 +252,7 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
       types: rbcData.subtype_summary && Object.keys(rbcData.subtype_summary).length > 0
         ? Object.entries(rbcData.subtype_summary).map(([k, v]) => `${k}: ${v}`).join(' · ')
         : 'Not detected',
-      color: '#ef5350',
+      color: '#f44336', // red
       icon: <BloodtypeIcon sx={{ fontSize: 18 }} />,
       confidence: rbcData.total_count > 0 ? 98 : 99
     },
@@ -249,7 +264,14 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
       icon: <ScienceIcon sx={{ fontSize: 18 }} />,
       confidence: yeastData.total_count > 0 ? 95 : 99
     },
-    { name: 'Bacteria', count: 0, types: 'N/A (ML module pending)', color: '#66bb6a', icon: <BugReportIcon sx={{ fontSize: 18 }} />, confidence: 100 },
+    {
+      name: 'Bacteria',
+      count: analysis?.bacteria?.total_count || 0,
+      types: analysis?.bacteria?.total_count > 0 ? analysis.bacteria.risk_assessment.level : 'Not detected',
+      color: '#00bcd4', // cyan
+      icon: <BugReportIcon sx={{ fontSize: 18 }} />,
+      confidence: analysis?.bacteria?.total_count > 0 ? 98 : 99
+    },
   ];
 
   const clinicalSuggestion = crystalsData.risk_assessment?.clinical_suggestion || castsData.risk_assessment?.level || "No significant abnormalities detected in Casts or Crystals.";

@@ -11,6 +11,8 @@ from particles.rbc.detector import RBCDetector
 from particles.rbc.pipeline import RBCPipeline
 from particles.yeast.detector import YeastDetector
 from particles.yeast.pipeline import YeastPipeline
+from particles.bacteria.detector import BacteriaDetector
+from particles.bacteria.pipeline import BacteriaPipeline
 
 def get_particles():
     return [
@@ -38,5 +40,10 @@ def get_particles():
             "name": "yeast",
             "detector": YeastDetector(),
             "pipeline": YeastPipeline()
+        },
+        {
+            "name": "bacteria",
+            "detector": BacteriaDetector(),
+            "pipeline": BacteriaPipeline()
         }
     ]
