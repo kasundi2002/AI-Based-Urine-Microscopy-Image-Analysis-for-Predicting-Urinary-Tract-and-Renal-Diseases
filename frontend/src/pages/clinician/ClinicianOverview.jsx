@@ -5,11 +5,10 @@ import PeopleIcon from '@mui/icons-material/People';
 import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import NotificationsIcon from '@mui/icons-material/Notifications';
-import SystemUpdateIcon from '@mui/icons-material/SystemUpdate';
 import BuildIcon from '@mui/icons-material/Build';
 import AccessTimeFilledIcon from '@mui/icons-material/AccessTimeFilled';
 import PendingActionsIcon from '@mui/icons-material/PendingActions';
+import { api } from '../../services/api';
 
 // A premium-looking stat card utilizing white space, soft shadows, and subtle color accents
 const StatCard = ({ title, value, color, icon, trendLabel }) => {
@@ -90,20 +89,55 @@ const StatCard = ({ title, value, color, icon, trendLabel }) => {
 
 const ClinicianOverview = ({ onNavigate }) => {
   const theme = useTheme();
-  // Mock data
+  const [patients, setPatients] = React.useState([]);
+  const [reports, setReports] = React.useState([]);
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [pData, rData] = await Promise.all([
+          api.getPatients(),
+          api.getAllReports()
+        ]);
+        setPatients(pData);
+        setReports(rData);
+      } catch (err) {
+        console.error('Failed to fetch clinician dashboard data:', err);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const todayStr = new Date().toDateString();
+  const completedToday = patients.filter(p => p.status === 'Completed' && new Date(p.updatedAt || p.createdAt).toDateString() === todayStr).length;
+
   const stats = {
-    pendingReviews: 12,
-    totalPatients: 145,
-    criticalCases: 3,
-    completedToday: 5
+    pendingReviews: patients.filter(p => p.status === 'Ready for Review').length,
+    totalPatients: patients.length,
+    criticalCases: patients.filter(p => p.status === 'Ready for Review' && (p.riskAssessment === 'High' || p.riskAssessment === 'Critical')).length,
+    completedToday: completedToday
   };
 
-  const pendingList = [
-      { id: '1', name: 'Kane Peter', risk: 'High', date: 'Oct 20', time: '10:45 AM' },
-      { id: '2', name: 'Alice Smith', risk: 'High', date: 'Oct 21', time: '09:15 AM' },
-      { id: '3', name: 'Bob Johnson', risk: 'Moderate', date: 'Oct 21', time: '02:30 PM' },
-      { id: '4', name: 'John Doe', risk: 'High', date: 'Oct 22', time: '11:00 AM' },
-  ];
+  const pendingList = patients
+    .filter(p => p.status === 'Ready for Review')
+    .sort((a, b) => {
+      // Sort High risk first, then by date
+      if ((a.riskAssessment === 'High' || a.riskAssessment === 'Critical') && !(b.riskAssessment === 'High' || b.riskAssessment === 'Critical')) return -1;
+      if (!(a.riskAssessment === 'High' || a.riskAssessment === 'Critical') && (b.riskAssessment === 'High' || b.riskAssessment === 'Critical')) return 1;
+      return new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt);
+    })
+    .slice(0, 4)
+    .map(p => {
+      const d = new Date(p.updatedAt || p.createdAt);
+      return {
+        id: p._id || p.patientId,
+        patient: p, // keep ref for navigation if needed
+        name: p.name || 'Unknown',
+        risk: p.riskAssessment || 'Pending',
+        date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        time: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      };
+    });
 
   return (
     <Box sx={{ width: '100%' }}>
@@ -119,6 +153,7 @@ const ClinicianOverview = ({ onNavigate }) => {
           <Button 
             variant="contained" 
             startIcon={<PendingActionsIcon />}
+            onClick={() => onNavigate('patients')}
             sx={{ 
                 borderRadius: 2, 
                 px: 3, 
@@ -139,7 +174,7 @@ const ClinicianOverview = ({ onNavigate }) => {
             value={stats.pendingReviews} 
             color="#FF9800" 
             icon={<AssignmentIcon />} 
-            trendLabel="+2 Needs Action"
+            trendLabel={`${stats.criticalCases} Urgent`}
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -148,7 +183,7 @@ const ClinicianOverview = ({ onNavigate }) => {
             value={stats.criticalCases} 
             color="#F44336" 
             icon={<WarningIcon />} 
-            trendLabel="Urgent"
+            trendLabel="Needs Action"
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
@@ -290,42 +325,46 @@ const ClinicianOverview = ({ onNavigate }) => {
                 <CardContent sx={{ p: 4 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
                         <Box sx={{ p: 1.2, bgcolor: alpha(theme.palette.primary.main, 0.1), borderRadius: 2, mr: 2, color: theme.palette.primary.main }}>
-                           <NotificationsIcon fontSize="small" />
+                           <AssignmentIcon fontSize="small" />
                         </Box>
                         <Box>
-                             <Typography variant="h6" sx={{ fontWeight: 700, color: theme.palette.text.primary }}>System Updates</Typography>
-                             <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>Recent platform activities</Typography>
+                             <Typography variant="h6" sx={{ fontWeight: 700, color: theme.palette.text.primary }}>Recent AI Reports</Typography>
+                             <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>Latest analyses from the lab</Typography>
                         </Box>
                     </Box>
                     
-                    <Box sx={{ display: 'flex', gap: 2.5, mb: 4, position: 'relative' }}>
-                        {/* Timeline Connector */}
-                        <Box sx={{ position: 'absolute', left: 24, top: 48, bottom: -24, width: 2, bgcolor: alpha(theme.palette.divider, 0.1) }} />
-                        
-                        <Avatar sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main, width: 48, height: 48, zIndex: 1 }}>
-                            <SystemUpdateIcon />
-                        </Avatar>
-                        <Box sx={{ pt: 0.5 }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5 }}>Version 2.1 Deployed</Typography>
-                            <Typography variant="body2" sx={{ color: theme.palette.text.secondary, lineHeight: 1.6, fontWeight: 500 }}>
-                                New AI model deployed for improved crystal detection accuracy (98.5%).
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: theme.palette.text.disabled, mt: 1, display: 'block', fontWeight: 600 }}>2 hours ago</Typography>
-                        </Box>
-                    </Box>
+                    {reports.slice(0, 3).map((r, i) => {
+                        const pat = patients.find(p => p._id === (typeof r.patientId === 'object' ? r.patientId._id : r.patientId));
+                        const patName = pat?.name || 'Unknown Patient';
+                        const timeStr = new Date(r.createdAt || Date.now()).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                        const dateStr = new Date(r.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        const isHighRisk = pat?.riskAssessment === 'High' || pat?.riskAssessment === 'Critical';
+                        const color = isHighRisk ? '#F44336' : theme.palette.primary.main;
 
-                    <Box sx={{ display: 'flex', gap: 2.5 }}>
-                        <Avatar sx={{ bgcolor: alpha('#FF9800', 0.1), color: '#FF9800', width: 48, height: 48, zIndex: 1 }}>
-                            <BuildIcon />
-                        </Avatar>
-                        <Box sx={{ pt: 0.5 }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5 }}>Scheduled Maintenance</Typography>
-                            <Typography variant="body2" sx={{ color: theme.palette.text.secondary, lineHeight: 1.6, fontWeight: 500 }}>
-                                System will be offline for routine maintenance on Sunday 2 AM - 4 AM.
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: theme.palette.text.disabled, mt: 1, display: 'block', fontWeight: 600 }}>Yesterday</Typography>
-                        </Box>
-                    </Box>
+                        return (
+                            <Box key={r._id || i} sx={{ display: 'flex', gap: 2.5, mb: 4, position: 'relative' }}>
+                                {i < 2 && <Box sx={{ position: 'absolute', left: 24, top: 48, bottom: -24, width: 2, bgcolor: alpha(theme.palette.divider, 0.1) }} />}
+                                
+                                <Avatar sx={{ bgcolor: alpha(color, 0.1), color: color, width: 48, height: 48, zIndex: 1, border: `1px solid ${alpha(color, 0.2)}` }}>
+                                    {isHighRisk ? <WarningIcon fontSize="small" /> : <AssignmentIcon fontSize="small" />}
+                                </Avatar>
+                                <Box sx={{ pt: 0.5, flex: 1 }}>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5 }}>
+                                        {isHighRisk ? 'Critical Analysis Flagged' : 'New Report Generated'}
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ color: theme.palette.text.secondary, lineHeight: 1.6, fontWeight: 500 }}>
+                                        Results available for {patName}.
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ color: theme.palette.text.disabled, mt: 1, display: 'block', fontWeight: 600 }}>
+                                        {dateStr} at {timeStr}
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        );
+                    })}
+                    {reports.length === 0 && (
+                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>No recent reports available.</Typography>
+                    )}
                 </CardContent>
             </Card>
         </Grid>

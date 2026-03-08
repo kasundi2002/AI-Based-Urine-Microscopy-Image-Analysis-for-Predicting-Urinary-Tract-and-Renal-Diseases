@@ -13,6 +13,7 @@ import GavelIcon from '@mui/icons-material/Gavel';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import EditNoteIcon from '@mui/icons-material/EditNote';
 import { api } from '../../services/api';
 
 const DoctorPatientQueue = ({ onSelectPatient }) => {
@@ -185,16 +186,25 @@ const DoctorPatientQueue = ({ onSelectPatient }) => {
                       <Button 
                         variant="contained" 
                         size="small"
-                        startIcon={<GavelIcon sx={{ fontSize: 16 }} />}
+                        startIcon={patient.status === 'Completed' ? <EditNoteIcon sx={{ fontSize: 16 }} /> : <GavelIcon sx={{ fontSize: 16 }} />}
                         onClick={() => onSelectPatient(patient)}
                         sx={{ 
                           textTransform: 'none', fontWeight: 700, borderRadius: 2, px: 2.5,
                           fontSize: '0.75rem', height: 32,
-                          background: 'linear-gradient(135deg, #0f172a, #1e3a5f)',
-                          boxShadow: '0 2px 8px rgba(15,23,42,0.2)',
+                          background: patient.status === 'Completed'
+                            ? 'linear-gradient(135deg, #43a047, #66bb6a)'
+                            : 'linear-gradient(135deg, #0f172a, #1e3a5f)',
+                          boxShadow: patient.status === 'Completed'
+                            ? '0 2px 8px rgba(67,160,71,0.2)'
+                            : '0 2px 8px rgba(15,23,42,0.2)',
+                          '&:hover': {
+                            background: patient.status === 'Completed'
+                              ? 'linear-gradient(135deg, #2e7d32, #43a047)'
+                              : 'linear-gradient(135deg, #1e293b, #2d4a6f)',
+                          }
                         }}
                       >
-                        Review
+                        {patient.status === 'Completed' ? 'Edit Review' : 'Review'}
                       </Button>
                     </TableCell>
                   </TableRow>

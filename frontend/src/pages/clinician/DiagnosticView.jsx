@@ -72,10 +72,29 @@ const DiagnosticView = ({ report, onVerify }) => {
   const [agreement, setAgreement] = useState('agree');
   const [notes, setNotes] = useState('');
   const [prescription, setPrescription] = useState('');
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState(report?.status === 'Verified' || report?.patientId?.status === 'Completed');
   const [submitting, setSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [zoom, setZoom] = useState(1);
+
+  // Sync submitted state with report/patient status changes
+  useEffect(() => {
+    if (report) {
+      const isVerified = report.status === 'Verified' || report.patientId?.status === 'Completed';
+      setSubmitted(isVerified);
+      
+      // If report already has verification data (populated by backend getReport), load it
+      if (report.verification) {
+        setAgreement(report.verification.agreement || 'agree');
+        setNotes(report.verification.clinicalNotes || report.comments || '');
+        setPrescription(report.verification.prescription || '');
+      } else {
+        setAgreement('agree');
+        setNotes(report.comments || '');
+        setPrescription('');
+      }
+    }
+  }, [report]);
 
   const imgRef = useRef(null);
   const canvasRef = useRef(null);
@@ -281,6 +300,11 @@ const DiagnosticView = ({ report, onVerify }) => {
     setSubmitting(true);
     try {
       await api.submitVerification(reportId, { agreement, notes, prescription });
+      
+      // Optimistically update the report status
+      report.status = 'Verified';
+      if (report.patientId) report.patientId.status = 'Completed';
+      
       setSubmitted(true);
       setShowSuccess(true);
       setTimeout(() => {
@@ -317,8 +341,8 @@ const DiagnosticView = ({ report, onVerify }) => {
         <Box sx={{ display: 'flex', gap: 1.5 }}>
           <Button
             variant="contained"
-            disabled={submitted || submitting}
-            startIcon={submitted ? <CheckCircleIcon /> : <VerifiedUserIcon />}
+            disabled={submitting}
+            startIcon={submitted ? <EditNoteIcon /> : <VerifiedUserIcon />}
             onClick={handleSubmit}
             sx={{
               textTransform: 'none', fontWeight: 700, borderRadius: 2, px: 3,
@@ -326,10 +350,14 @@ const DiagnosticView = ({ report, onVerify }) => {
                 ? 'linear-gradient(135deg, #43a047, #66bb6a)' 
                 : 'linear-gradient(135deg, #0f172a, #1e3a5f)',
               boxShadow: submitted ? '0 4px 14px rgba(67,160,71,0.3)' : '0 4px 14px rgba(15,23,42,0.25)',
-              '&.Mui-disabled': { background: submitted ? 'linear-gradient(135deg, #43a047, #66bb6a)' : undefined, color: submitted ? 'white' : undefined },
+              '&:hover': {
+                background: submitted 
+                  ? 'linear-gradient(135deg, #2e7d32, #43a047)' 
+                  : 'linear-gradient(135deg, #1e293b, #2d4a6f)',
+              }
             }}
           >
-            {submitted ? 'Verified & Signed ✓' : submitting ? 'Submitting...' : 'Verify & Sign Report'}
+            {submitting ? 'Submitting...' : submitted ? 'Update Verification' : 'Verify & Sign Report'}
           </Button>
         </Box>
       </Box>
@@ -626,15 +654,14 @@ const DiagnosticView = ({ report, onVerify }) => {
               <Paper
                 key={opt.value}
                 elevation={0}
-                onClick={() => !submitted && setAgreement(opt.value)}
+                onClick={() => setAgreement(opt.value)}
                 sx={{
-                  flex: 1, p: 2, borderRadius: 2.5, cursor: submitted ? 'default' : 'pointer', textAlign: 'center',
+                  flex: 1, p: 2, borderRadius: 2.5, cursor: 'pointer', textAlign: 'center',
                   border: '2px solid',
                   borderColor: agreement === opt.value ? opt.color : 'divider',
                   bgcolor: agreement === opt.value ? alpha(opt.color, 0.06) : 'transparent',
                   transition: 'all 0.2s',
-                  opacity: submitted ? 0.6 : 1,
-                  '&:hover': submitted ? {} : { borderColor: alpha(opt.color, 0.5), bgcolor: alpha(opt.color, 0.03) }
+                  '&:hover': { borderColor: alpha(opt.color, 0.5), bgcolor: alpha(opt.color, 0.03) }
                 }}
               >
                 <Box sx={{ color: agreement === opt.value ? opt.color : 'text.secondary', mb: 0.5 }}>
@@ -671,7 +698,7 @@ const DiagnosticView = ({ report, onVerify }) => {
                 <TextField 
                   multiline rows={3} fullWidth size="small" placeholder="Add your clinical observations..."
                   value={notes} onChange={(e) => setNotes(e.target.value)}
-                  disabled={submitted}
+                  disabled={submitting}
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                 />
               </Box>
@@ -685,7 +712,7 @@ const DiagnosticView = ({ report, onVerify }) => {
                 <TextField 
                   multiline rows={3} fullWidth size="small" placeholder="Write prescription and recommendations..."
                   value={prescription} onChange={(e) => setPrescription(e.target.value)}
-                  disabled={submitted}
+                  disabled={submitting}
                   sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                 />
               </Box>

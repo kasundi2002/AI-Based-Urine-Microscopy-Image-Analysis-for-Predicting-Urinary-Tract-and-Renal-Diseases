@@ -114,7 +114,13 @@ export const getReport = async (req, res, next) => {
             return res.status(404).json({ success: false, error: 'Report not found' });
         }
 
-        res.status(200).json({ success: true, data: report });
+        // Fetch latest verification if verified
+        let verification = null;
+        if (report.status === 'Verified') {
+            verification = await ClinicalVerification.findOne({ reportId: report._id }).sort({ createdAt: -1 });
+        }
+
+        res.status(200).json({ success: true, data: { ...report._doc, verification } });
     } catch (error) {
         next(error);
     }
@@ -127,22 +133,32 @@ export const verifyReport = async (req, res, next) => {
     try {
         const { agreement, notes, prescription } = req.body;
 
-        const report = await Report.findById(req.params.id);
+        const report = await Report.findById(req.params.id).populate('patientId');
 
         if (!report) {
             return res.status(404).json({ success: false, error: 'Report not found' });
         }
 
-        // 1. Create a separate ClinicalVerification document
-        const verification = await ClinicalVerification.create({
-            reportId: report._id,
-            patientId: report.patientId,
-            clinicianId: req.user.id,
-            agreement: agreement || 'agree',
-            clinicalNotes: notes || '',
-            prescription: prescription || '',
-            verifiedAt: Date.now()
-        });
+        // 1. Update or Create ClinicalVerification document
+        let verification = await ClinicalVerification.findOne({ reportId: report._id });
+        
+        if (verification) {
+            verification.agreement = agreement || 'agree';
+            verification.clinicalNotes = notes || '';
+            verification.prescription = prescription || '';
+            verification.verifiedAt = Date.now();
+            await verification.save();
+        } else {
+            verification = await ClinicalVerification.create({
+                reportId: report._id,
+                patientId: report.patientId?._id || report.patientId,
+                clinicianId: req.user.id,
+                agreement: agreement || 'agree',
+                clinicalNotes: notes || '',
+                prescription: prescription || '',
+                verifiedAt: Date.now()
+            });
+        }
 
         // 2. Update the Report status
         await Report.findByIdAndUpdate(req.params.id, {
@@ -153,9 +169,11 @@ export const verifyReport = async (req, res, next) => {
         });
 
         // 3. Update the Patient status to Completed
-        await Patient.findByIdAndUpdate(report.patientId, {
-            status: 'Completed'
-        });
+        if (report.patientId) {
+            await Patient.findByIdAndUpdate(report.patientId._id, {
+                status: 'Completed'
+            });
+        }
 
         res.status(200).json({ success: true, data: verification });
     } catch (error) {
