@@ -54,6 +54,10 @@ const patientSchema = new mongoose.Schema({
     dateAssigned: {
         type: Date,
         default: Date.now
+    },
+    emailSent: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

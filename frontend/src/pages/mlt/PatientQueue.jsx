@@ -34,6 +34,11 @@ const PatientQueue = ({ onSelectPatient }) => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [patientToDelete, setPatientToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  
+  // For editing
+  const [isEditing, setIsEditing] = useState(false);
+  const [patientToEdit, setPatientToEdit] = useState(null);
+  const [showEditSuccess, setShowEditSuccess] = useState(false);
 
 
   useEffect(() => {
@@ -68,15 +73,36 @@ const PatientQueue = ({ onSelectPatient }) => {
   );
 
   const handleOpenDialog = () => {
+    setIsEditing(false);
+    setPatientToEdit(null);
     setForm(emptyForm);
+    setErrors({});
+    setDialogOpen(true);
+  };
+
+  const handleOpenEditDialog = (patient) => {
+    setIsEditing(true);
+    setPatientToEdit(patient);
+    setForm({
+      name: patient.name || '',
+      age: patient.age || '',
+      gender: patient.gender || '',
+      email: patient.email || '',
+      mobile: patient.mobile || '',
+      notes: patient.notes || ''
+    });
     setErrors({});
     setDialogOpen(true);
   };
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
-    setForm(emptyForm);
-    setErrors({});
+    setTimeout(() => {
+        setForm(emptyForm);
+        setIsEditing(false);
+        setPatientToEdit(null);
+        setErrors({});
+    }, 200); // Wait for transition
   };
 
   const handleFormChange = (field, value) => {
@@ -100,24 +126,33 @@ const PatientQueue = ({ onSelectPatient }) => {
     if (!validate()) return;
     setSaving(true);
     try {
-      const newPatient = await api.addPatient(form);
-      setPatients(prev => [newPatient, ...prev]);
-      handleCloseDialog();
-      setShowSuccess(true);
-      // Try to send the secure access email (best-effort)
-      try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:5000/api/patient-access/send-link', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ patientId: newPatient.patientId }),
-        });
-        if (response.ok) setShowEmailSent(true);
-      } catch (linkErr) {
-        console.warn('Could not send patient access email:', linkErr.message);
+      if (isEditing && patientToEdit) {
+        // Update existing patient
+        const updatedPatient = await api.updatePatient(patientToEdit._id, form);
+        setPatients(prev => prev.map(p => p._id === updatedPatient._id ? updatedPatient : p));
+        handleCloseDialog();
+        setShowEditSuccess(true);
+      } else {
+        // Create new patient
+        const newPatient = await api.addPatient(form);
+        setPatients(prev => [newPatient, ...prev]);
+        handleCloseDialog();
+        setShowSuccess(true);
+        // Try to send the secure access email (best-effort)
+        try {
+          const token = localStorage.getItem('token');
+          const response = await fetch('http://localhost:5000/api/patient-access/send-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ patientId: newPatient.patientId }),
+          });
+          if (response.ok) setShowEmailSent(true);
+        } catch (linkErr) {
+          console.warn('Could not send patient access email:', linkErr.message);
+        }
       }
     } catch (err) {
-      console.error('Failed to add patient', err);
+      console.error(isEditing ? 'Failed to update patient' : 'Failed to add patient', err);
     } finally {
       setSaving(false);
     }
@@ -309,7 +344,7 @@ const PatientQueue = ({ onSelectPatient }) => {
                         )}
                         
                         <Tooltip title="Edit">
-                          <IconButton size="small" sx={{
+                          <IconButton size="small" onClick={() => handleOpenEditDialog(patient)} sx={{
                             color: 'text.secondary',
                             '&:hover': { color: '#ff9100', bgcolor: alpha('#ff9100', 0.08) }
                           }}>
@@ -353,8 +388,12 @@ const PatientQueue = ({ onSelectPatient }) => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <PersonAddIcon />
             <Box>
-              <Typography variant="h6" fontWeight={700}>Add New Patient</Typography>
-              <Typography variant="caption" sx={{ opacity: 0.7 }}>Fill in patient details to register</Typography>
+              <Typography variant="h6" fontWeight={700}>
+                {isEditing ? 'Edit Patient Details' : 'Add New Patient'}
+              </Typography>
+              <Typography variant="caption" sx={{ opacity: 0.7 }}>
+                {isEditing ? 'Update the details for this patient' : 'Fill in patient details to register'}
+              </Typography>
             </Box>
           </Box>
           <IconButton onClick={handleCloseDialog} sx={{ color: 'white', opacity: 0.7, '&:hover': { opacity: 1 } }}>
@@ -446,14 +485,16 @@ const PatientQueue = ({ onSelectPatient }) => {
             </Grid>
           </Grid>
 
-          <Paper elevation={0} sx={{ 
-            mt: 2.5, p: 2, borderRadius: 2, 
-            bgcolor: alpha('#00bcd4', 0.04), border: '1px solid', borderColor: alpha('#00bcd4', 0.12)
-          }}>
-            <Typography variant="caption" color="text.secondary">
-              <strong>Note:</strong> The patient will be registered with status <Chip label="Awaiting Analysis" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 600, mx: 0.5 }} /> and AI Risk <Chip label="Pending" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 600, mx: 0.5 }} />. A secure access link will be sent to the patient's email after registration.
-            </Typography>
-          </Paper>
+          {!isEditing && (
+            <Paper elevation={0} sx={{ 
+              mt: 2.5, p: 2, borderRadius: 2, 
+              bgcolor: alpha('#00bcd4', 0.04), border: '1px solid', borderColor: alpha('#00bcd4', 0.12)
+            }}>
+              <Typography variant="caption" color="text.secondary">
+                <strong>Note:</strong> The patient will be registered with status <Chip label="Awaiting Analysis" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 600, mx: 0.5 }} /> and AI Risk <Chip label="Pending" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 600, mx: 0.5 }} />. A secure access link will be sent to the patient's email after registration.
+              </Typography>
+            </Paper>
+          )}
         </DialogContent>
 
         <DialogActions sx={{ px: 3, py: 2.5, borderTop: '1px solid', borderColor: 'divider' }}>
@@ -474,7 +515,7 @@ const PatientQueue = ({ onSelectPatient }) => {
               boxShadow: '0 4px 14px rgba(15,23,42,0.25)',
             }}
           >
-            {saving ? 'Saving...' : 'Register Patient'}
+            {saving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Register Patient')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -501,6 +542,12 @@ const PatientQueue = ({ onSelectPatient }) => {
       <Snackbar open={showSuccess} autoHideDuration={4000} onClose={() => setShowSuccess(false)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
         <Alert onClose={() => setShowSuccess(false)} severity="success" variant="filled" icon={<PersonAddIcon />} sx={{ fontWeight: 600, borderRadius: 2, width: '100%' }}>
           Patient registered successfully and added to the queue.
+        </Alert>
+      </Snackbar>
+
+      <Snackbar open={showEditSuccess} autoHideDuration={4000} onClose={() => setShowEditSuccess(false)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={() => setShowEditSuccess(false)} severity="success" variant="filled" icon={<SaveIcon />} sx={{ fontWeight: 600, borderRadius: 2, width: '100%' }}>
+          Patient details updated successfully.
         </Alert>
       </Snackbar>
 

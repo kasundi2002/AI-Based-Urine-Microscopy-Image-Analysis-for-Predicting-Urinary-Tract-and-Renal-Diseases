@@ -1,5 +1,5 @@
 import express from 'express';
-import { getPatients, getPatient, createPatient, deletePatient } from '../controllers/patientController.js';
+import { getPatients, getPatient, createPatient, deletePatient, updatePatient } from '../controllers/patientController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -10,6 +10,7 @@ router.route('/')
 
 router.route('/:id')
     .get(protect, authorize('MLT', 'CLINICIAN'), getPatient)
+    .put(protect, authorize('MLT', 'CLINICIAN'), updatePatient)
     .delete(protect, authorize('MLT'), deletePatient);
 
 export default router;

@@ -153,8 +153,10 @@ const ResultsPage = ({ onViewReport }) => {
               <EmailIcon sx={{ fontSize: 22 }} />
             </Box>
             <Box>
-              <Typography variant="h4" fontWeight={800}>{Object.keys(emailSent).length}</Typography>
-              <Typography variant="caption" color="text.secondary" fontWeight={600}>Emails Sent (this session)</Typography>
+              <Typography variant="h4" fontWeight={800}>
+                {completedPatients.filter(p => p.emailSent || emailSent[p.patientId]).length}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>Total Emails Sent</Typography>
             </Box>
           </Paper>
         </Grid>
@@ -223,7 +225,7 @@ const ResultsPage = ({ onViewReport }) => {
                   const riskColor = getRiskColor(patient.riskAssessment);
                   const statusColor = getStatusColor(patient.status);
                   const isSending = sendingEmail === patient.patientId;
-                  const wasSent = emailSent[patient.patientId];
+                  const wasSent = patient.emailSent || emailSent[patient.patientId];
 
                   return (
                     <TableRow

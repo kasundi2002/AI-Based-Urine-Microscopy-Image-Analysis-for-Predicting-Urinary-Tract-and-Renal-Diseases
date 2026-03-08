@@ -50,6 +50,18 @@ export const api = {
         return data.data; // return created patient
     },
 
+    updatePatient: async (patientId, patientData) => {
+        const response = await fetch(`${BACKEND_URL}/patients/${patientId}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(patientData)
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to update patient');
+        // Return updated patient from API
+        return data.data;
+    },
+
     deletePatient: async (patientId) => {
         const response = await fetch(`${BACKEND_URL}/patients/${patientId}`, {
             method: 'DELETE',

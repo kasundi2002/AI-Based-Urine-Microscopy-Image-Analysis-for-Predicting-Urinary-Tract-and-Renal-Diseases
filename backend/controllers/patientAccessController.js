@@ -93,6 +93,8 @@ export const sendAccessLink = async (req, res, next) => {
         // Send email (non-blocking — don't crash if email fails)
         try {
             await sendAccessEmail(patient, rawToken);
+            patient.emailSent = true;
+            await patient.save();
         } catch (emailErr) {
             console.error('Email send failed:', emailErr.message);
         }
