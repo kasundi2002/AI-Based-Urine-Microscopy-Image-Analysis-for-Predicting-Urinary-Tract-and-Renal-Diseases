@@ -44,9 +44,11 @@ const DoctorPatientQueue = ({ onSelectPatient }) => {
   };
 
   const filtered = patients.filter(p => {
+    // Only show patients that have been analyzed (Ready for Review or Completed)
+    if (p.status !== 'Ready for Review' && p.status !== 'Completed') return false;
     const matchSearch = !searchTerm || 
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      p.id.toLowerCase().includes(searchTerm.toLowerCase());
+      (p.patientId || p.id || '').toLowerCase().includes(searchTerm.toLowerCase());
     if (tab === 1) return matchSearch && p.status === 'Ready for Review';
     if (tab === 2) return matchSearch && p.status === 'Completed';
     return matchSearch;
@@ -127,7 +129,7 @@ const DoctorPatientQueue = ({ onSelectPatient }) => {
                 const status = getStatusConfig(patient.status);
                 return (
                   <TableRow 
-                    hover key={patient.id} 
+                    hover key={patient._id || patient.id} 
                     sx={{ 
                       transition: 'all 0.15s',
                       '&:hover': { bgcolor: alpha('#7c4dff', 0.02) },
@@ -144,7 +146,7 @@ const DoctorPatientQueue = ({ onSelectPatient }) => {
                         </Avatar>
                         <Box>
                           <Typography variant="body2" fontWeight={600}>{patient.name}</Typography>
-                          <Typography variant="caption" color="text.secondary">{patient.id}</Typography>
+                          <Typography variant="caption" color="text.secondary">{patient.patientId || patient.id}</Typography>
                         </Box>
                       </Box>
                     </TableCell>
@@ -154,7 +156,7 @@ const DoctorPatientQueue = ({ onSelectPatient }) => {
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                         <CalendarTodayIcon sx={{ fontSize: 13, color: 'text.disabled' }} />
-                        <Typography variant="body2" color="text.secondary">{patient.date}</Typography>
+                        <Typography variant="body2" color="text.secondary">{patient.dateAssigned ? new Date(patient.dateAssigned).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : (patient.date || '-')}</Typography>
                       </Box>
                     </TableCell>
                     <TableCell>

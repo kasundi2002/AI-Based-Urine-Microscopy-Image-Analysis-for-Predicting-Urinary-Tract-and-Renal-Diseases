@@ -1,5 +1,6 @@
 import Report from '../models/Report.js';
 import Patient from '../models/Patient.js';
+import ClinicalVerification from '../models/ClinicalVerification.js';
 import fs from 'fs';
 import axios from 'axios';
 import FormData from 'form-data';
@@ -16,7 +17,7 @@ export const getReports = async (req, res, next) => {
         
         const reports = await Report.find(query)
             .sort({ createdAt: -1 })
-            .populate('patientId', 'name patientId')
+            .populate('patientId', 'name patientId age status riskAssessment dateAssigned')
             .populate('uploadedBy', 'name');
 
         res.status(200).json({ success: true, count: reports.length, data: reports });
@@ -124,31 +125,39 @@ export const getReport = async (req, res, next) => {
 // @access  Private (CLINICIAN)
 export const verifyReport = async (req, res, next) => {
     try {
-        const { comments, status } = req.body;
+        const { agreement, notes, prescription } = req.body;
 
-        let report = await Report.findById(req.params.id);
+        const report = await Report.findById(req.params.id);
 
         if (!report) {
             return res.status(404).json({ success: false, error: 'Report not found' });
         }
 
-        report = await Report.findByIdAndUpdate(req.params.id, {
-            status: status || 'Verified',
-            comments,
+        // 1. Create a separate ClinicalVerification document
+        const verification = await ClinicalVerification.create({
+            reportId: report._id,
+            patientId: report.patientId,
             clinicianId: req.user.id,
+            agreement: agreement || 'agree',
+            clinicalNotes: notes || '',
+            prescription: prescription || '',
             verifiedAt: Date.now()
-        }, {
-            new: true,
-            runValidators: true
         });
 
-        // Update the associated patient based on report analysis
+        // 2. Update the Report status
+        await Report.findByIdAndUpdate(req.params.id, {
+            status: 'Verified',
+            clinicianId: req.user.id,
+            verifiedAt: Date.now(),
+            comments: notes || ''
+        });
+
+        // 3. Update the Patient status to Completed
         await Patient.findByIdAndUpdate(report.patientId, {
-            status: 'Completed',
-            riskAssessment: report.riskScore > 75 ? 'High' : 'Normal'
+            status: 'Completed'
         });
 
-        res.status(200).json({ success: true, data: report });
+        res.status(200).json({ success: true, data: verification });
     } catch (error) {
         next(error);
     }

@@ -15,9 +15,34 @@ const ClinicianDashboard = () => {
     setSearchParams({ view });
   };
 
-  const handleSelectReport = (report) => {
-      setSelectedReport(report);
+  const handleSelectReport = async (patient) => {
+    try {
+      // Fetch the latest report for this patient from the database
+      const reports = await api.getReportsByPatient(patient._id);
+      if (reports && reports.length > 0) {
+        const latestReport = reports[0]; // Already sorted by createdAt desc
+        setSelectedReport({
+          ...latestReport,
+          // Attach patient info for easy access
+          patientName: patient.name,
+          patientAge: patient.age,
+          patientDisplayId: patient.patientId || patient.id,
+        });
+      } else {
+        // Fallback: pass patient info directly if no report found
+        setSelectedReport(patient);
+      }
       setView('review');
+    } catch (error) {
+      console.error('Failed to fetch report:', error);
+      setSelectedReport(patient);
+      setView('review');
+    }
+  };
+
+  const handleVerificationComplete = () => {
+    setSelectedReport(null);
+    setView('patients');
   };
 
   return (
@@ -31,10 +56,11 @@ const ClinicianDashboard = () => {
       )}
 
       {currentView === 'review' && (
-        <DiagnosticView report={selectedReport} />
+        <DiagnosticView report={selectedReport} onVerify={handleVerificationComplete} />
       )}
     </Box>
   );
 };
 
 export default ClinicianDashboard;
+
