@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
-import { getReports, uploadImage, getReport, verifyReport, submitReport } from '../controllers/reportController.js';
+import { getReports, uploadImage, getReport, verifyReport, submitReport, submitQuestionnaire } from '../controllers/reportController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();

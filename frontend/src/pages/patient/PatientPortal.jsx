@@ -472,20 +472,6 @@ const PatientPortal = () => {
           </>
         )}
       </Box>
-          <ResultsDashboard report={displayReport} patientName={user?.name || 'John Doe'} />
-        </React.Fragment>
-      )}
-
-      {currentView === 'analysis' && (
-        <Questionnaire 
-          reportId={latestResult?.id} 
-          onComplete={handleQuestionnaireComplete} 
-        />
-      )}
-
-      {currentView === 'results' && (
-        <HistoryView onViewDetails={handleViewDetails} />
-      )}
     </Box>
   );
 };
