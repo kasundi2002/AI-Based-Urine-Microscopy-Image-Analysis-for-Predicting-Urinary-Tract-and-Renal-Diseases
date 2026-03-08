@@ -10,11 +10,11 @@ from core.base_detector import BaseDetector
 
 class CastDetector(BaseDetector):
     def __init__(self):
-        # Resolve path to ml-core/models/best.pt
+        # Resolve path to ml-core/models/cast/cast_best.pt
         # __file__ is ml-core/particles/cast/detector.py
         # Need to go up 3 levels to ml-core
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        model_path = os.path.join(base_dir, "models", "cast_best.pt")
+        model_path = os.path.join(base_dir, "models", "cast", "cast_best.pt")
         
         # Load YOLO model ONCE
         self.model = YOLO(model_path)

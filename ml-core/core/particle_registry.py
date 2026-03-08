@@ -11,7 +11,7 @@ from particles.wbc.pipeline import WBCPipeline
 from particles.yeast.detector import YeastDetector
 from particles.yeast.pipeline import YeastPipeline
 
-from particles.bacteria.detector import EcoliDetector
+from particles.bacteria.detector import BacteriaDetector
 from particles.bacteria.pipeline import BacteriaPipeline
 
 def get_particles():
@@ -21,5 +21,5 @@ def get_particles():
         {"name": "crystals", "detector": CrystalDetector(), "pipeline": CrystalPipeline()},
         {"name": "wbc", "detector": WBCDetector(), "pipeline": WBCPipeline()},
         {"name": "yeast", "detector": YeastDetector(), "pipeline": YeastPipeline()},
-        {"name": "ecoli", "detector": EcoliDetector(), "pipeline": BacteriaPipeline()},
+        {"name": "bacteria", "detector": BacteriaDetector(), "pipeline": BacteriaPipeline()},
     ]

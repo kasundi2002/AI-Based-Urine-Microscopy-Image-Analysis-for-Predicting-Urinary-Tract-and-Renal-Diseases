@@ -12,17 +12,19 @@ class CrystalPipeline:
         self.class_names = ['CaOx_Dihydrate', 'CaOx_Monohydrate', 'Phosphate', 'Uric_Acid']
         self.img_height = 224
         self.img_width = 224
+        self.model = None
         
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        model_path = os.path.join(base_dir, "models", "efficientnet_crystals_best_v2.keras")
+        model_path = os.path.join(base_dir, "models", "crystals", "efficientnet_crystals_best_v2.keras")
         
         if not os.path.exists(model_path):
-            raise FileNotFoundError(f"Classifier model not found at: {model_path}")
-            
-        try:
-            self.model = tf.keras.models.load_model(model_path)
-        except Exception as e:
-            raise RuntimeError(f"Failed to load classifier model: {e}")
+            print(f"WARNING: Crystal classifier model not found at: {model_path}")
+        else:
+            try:
+                self.model = tf.keras.models.load_model(model_path)
+            except Exception as e:
+                print(f"WARNING: Failed to load crystal classifier model: {e}")
+                self.model = None
             
         self.predictor = CrystalPredictor()
 
@@ -44,6 +46,9 @@ class CrystalPipeline:
 
     def classify(self, img_array):
         if img_array is None or img_array.size == 0:
+            return {'class': 'Unknown', 'confidence': 0.0}
+        
+        if self.model is None:
             return {'class': 'Unknown', 'confidence': 0.0}
 
         preprocessed_img = self.preprocess(img_array)

@@ -22,6 +22,13 @@ const reportSchema = new mongoose.Schema({
     analysis: {
         type: mongoose.Schema.Types.Mixed // Allows nested ML payload structure without strict validation
     },
+    clinicalData: {
+        type: mongoose.Schema.Types.Mixed // Questionnaire data submitted by patient
+    },
+    utiDetectedFromImage: {
+        type: Boolean,
+        default: false // True if particles (WBC/bacteria/yeast) detected in image
+    },
     status: {
         type: String,
         enum: ['Pending Verification', 'Verified', 'Rejected'],

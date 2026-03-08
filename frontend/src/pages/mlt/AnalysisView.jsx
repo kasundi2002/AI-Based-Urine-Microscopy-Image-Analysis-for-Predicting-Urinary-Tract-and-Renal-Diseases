@@ -119,14 +119,18 @@ const AnalysisView = ({ image, analysis, patient }) => {
         } else if (particleName === "wbc") {
           ctx.strokeStyle = "green";
           ctx.lineWidth = 2;
+        } else if (particleName === "bacteria") {
+          ctx.strokeStyle = "orange";
+          ctx.lineWidth = 2;
         } else if (particleName === "rbc") {
           console.log("Drawing RBC box:", box);
           ctx.strokeStyle = "purple";
           ctx.lineWidth = 1;
-        } else {
-          ctx.strokeStyle = "cyan";
-          ctx.lineWidth = 2;
         }
+        // } else {
+        //   ctx.strokeStyle = "cyan";
+        //   ctx.lineWidth = 2;
+        // }
 
         ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
 

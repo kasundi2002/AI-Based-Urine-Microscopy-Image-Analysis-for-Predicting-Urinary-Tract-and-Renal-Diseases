@@ -14,33 +14,44 @@ class CastPipeline:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.class_names = ["hyaline", "granular", "wbc", "rbc", "waxy"]
         self.num_classes = len(self.class_names)
+        self.model = None
         
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        model_path = os.path.join(base_dir, "models", "efficientnet_b2_best.pth")
+        model_path = os.path.join(base_dir, "models", "cast", "efficientnet_b2_best.pth")
         
         if not os.path.exists(model_path):
-            raise FileNotFoundError(f"Model not found at: {model_path}")
-            
-        weights = EfficientNet_B2_Weights.IMAGENET1K_V1
-        self.model = efficientnet_b2(weights=weights)
+            print(f"WARNING: Cast classifier model not found at: {model_path}")
+        else:
+            try:
+                weights = EfficientNet_B2_Weights.IMAGENET1K_V1
+                self.model = efficientnet_b2(weights=weights)
 
-        in_features = self.model.classifier[1].in_features
-        self.model.classifier = nn.Sequential(
-            nn.Dropout(p=0.4, inplace=True),
-            nn.Sequential(
-                nn.Identity(),
-                nn.Linear(in_features, self.num_classes)
-            )
-        )
+                in_features = self.model.classifier[1].in_features
+                self.model.classifier = nn.Sequential(
+                    nn.Dropout(p=0.4, inplace=True),
+                    nn.Sequential(
+                        nn.Identity(),
+                        nn.Linear(in_features, self.num_classes)
+                    )
+                )
 
-        state_dict = torch.load(model_path, map_location=self.device)
-        self.model.load_state_dict(state_dict, strict=True)
-        self.model.to(self.device)
-        self.model.eval()
+                state_dict = torch.load(model_path, map_location=self.device)
+                self.model.load_state_dict(state_dict, strict=True)
+                self.model.to(self.device)
+                self.model.eval()
+            except Exception as e:
+                print(f"WARNING: Failed to load cast classifier model: {e}")
+                self.model = None
         
         self.predictor = CastPredictor()
 
     def predict_subtype(self, crop_np: np.ndarray):
+        if self.model is None:
+            return {
+                "subtype": "unknown",
+                "confidence": 0.0
+            }
+        
         image = cv2.resize(crop_np, (260, 260))
         image = image.astype(np.float32) / 255.0
         mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)

@@ -9,9 +9,9 @@ from core.base_detector import BaseDetector
 
 class CrystalDetector(BaseDetector):
     def __init__(self):
-        # Resolve path to ml-core/models/crystal_best.pt
+        # Resolve path to ml-core/models/crystals/crystal_best.pt
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        model_path = os.path.join(base_dir, "models", "crystal_best.pt")
+        model_path = os.path.join(base_dir, "models", "crystals", "crystal_best.pt")
         
         # Load YOLO model ONCE
         if not os.path.exists(model_path):

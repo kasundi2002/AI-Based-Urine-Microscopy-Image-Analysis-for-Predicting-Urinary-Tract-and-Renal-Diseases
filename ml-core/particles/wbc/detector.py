@@ -7,9 +7,9 @@ from core.base_detector import BaseDetector
 class WBCDetector(BaseDetector):
     def __init__(self):
         super().__init__()
-        # Model path should resolve to: ml-core/models/wbc_yolov11n.pt
+        # Model path should resolve to: ml-core/models/wbc/wbc_yolov11n.pt
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        model_path = os.path.join(base_dir, "models", "wbc_yolov11n.pt")
+        model_path = os.path.join(base_dir, "models", "wbc", "wbc_yolov11n.pt")
         
         # Load YOLO model once
         self.model = YOLO(model_path)

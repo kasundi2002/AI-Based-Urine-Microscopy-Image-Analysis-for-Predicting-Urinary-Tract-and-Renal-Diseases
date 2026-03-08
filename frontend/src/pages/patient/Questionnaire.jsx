@@ -35,7 +35,7 @@ const processingPhases = [
   { icon: <VerifiedIcon />, label: 'Generating enhanced risk assessment...' },
 ];
 
-const steps = ['Basic Info', 'Symptoms', 'Lifestyle', 'Urinary Health'];
+const steps = ['Basic Info', 'UTI Symptoms', 'Lifestyle', 'Urinary Health'];
 const stepIcons = [<PersonIcon />, <MonitorHeartIcon />, <RestaurantIcon />, <WaterDropIcon />];
 
 const CustomStepIcon = ({ active, completed, icon }) => {
@@ -53,35 +53,108 @@ const CustomStepIcon = ({ active, completed, icon }) => {
   );
 };
 
-const Questionnaire = ({ onComplete }) => {
+const Questionnaire = ({ reportId, onComplete }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [currentPhase, setCurrentPhase] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
-    age: '', gender: 'male', painLevel: '0', hydration: 'adequate',
-    history: 'no', diet: 'normal', medication: 'no',
-    urinaryFrequency: 'normal', bloodInUrine: 'no', burning: 'no',
+    // Basic info
+    age: '',
+    gender: 'male',
+    
+    // UTI-specific clinical fields (Dataset 1)
+    dysuria: 'no',
+    abd_pain: '0',
+    fever: 'no',
+    polyuria: 'no',
+    
+    // UTI-specific clinical fields (Dataset 2)
+    temperature: '',
+    nausea: 'no',
+    lumbar_pain: 'no',
+    urine_pushing: 'no',
+    micturition_pain: 'no',
+    urethral_burning: 'no',
+    
+    // Keep existing fields for other diseases
+    hydration: 'adequate',
+    history: 'no',
+    diet: 'normal',
+    medication: 'no',
+    urinaryFrequency: 'normal',
+    bloodInUrine: 'no',
+    burning: 'no',
+    painLevel: '0',
   });
 
-  // AI loading animation phases
+  // AI loading animation phases & form submission
   useEffect(() => {
     if (!submitting) return;
+    
+    const submitForm = async () => {
+      try {
+        if (reportId) {
+          // Call backend API to submit questionnaire
+          const response = await fetch(`http://localhost:5000/api/reports/${reportId}/submit-questionnaire`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData),
+          });
+          
+          if (!response.ok) {
+            const errData = await response.json();
+            setError(errData.error || 'Failed to submit questionnaire');
+            setSubmitting(false);
+            return;
+          }
+          
+          const data = await response.json();
+          console.log('Questionnaire submitted:', data);
+        }
+      } catch (err) {
+        console.error('Submission error:', err);
+        setError('Network error while submitting questionnaire');
+        setSubmitting(false);
+        return;
+      }
+      
+      // Complete submission after processing
+      setTimeout(() => {
+        onComplete(formData);
+      }, 5200);
+    };
+    
     const phaseInterval = setInterval(() => {
       setCurrentPhase(prev => {
         if (prev >= processingPhases.length - 1) { clearInterval(phaseInterval); return prev; }
         return prev + 1;
       });
     }, 1200);
+    
     const progressInterval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) { clearInterval(progressInterval); return 100; }
         return prev + 2;
       });
     }, 100);
-    const completeTimer = setTimeout(() => { onComplete(formData); }, 5200);
-    return () => { clearInterval(phaseInterval); clearInterval(progressInterval); clearTimeout(completeTimer); };
-  }, [submitting]);
+    
+    // Call the async submission
+    submitForm();
+    
+    const completeTimer = setTimeout(() => { 
+      if (!error) {
+        onComplete(formData); 
+      }
+    }, 5200);
+    
+    return () => { 
+      clearInterval(phaseInterval); 
+      clearInterval(progressInterval); 
+      clearTimeout(completeTimer); 
+    };
+  }, [submitting, reportId]);
 
   const handleNext = () => {
     if (activeStep === steps.length - 1) { setSubmitting(true); } 
@@ -135,18 +208,103 @@ const Questionnaire = ({ onComplete }) => {
       case 1:
         return (
           <Box>
-            <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>Symptoms Assessment</Typography>
+            <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>UTI Symptoms Assessment</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Current symptoms significantly impact the risk calculation.
+              Current symptoms help identify potential UTI patterns.
             </Typography>
+
+            {/* Fever */}
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
+              Do you have a fever?
+            </Typography>
+            <Grid container spacing={1.5} sx={{ mb: 3 }}>
+              <Grid size={{ xs: 6 }}><RadioCard value="yes" label="Yes" currentValue={formData.fever} onChange={handleChange('fever')} /></Grid>
+              <Grid size={{ xs: 6 }}><RadioCard value="no" label="No" currentValue={formData.fever} onChange={handleChange('fever')} /></Grid>
+            </Grid>
+
+            {/* Temperature */}
+            {formData.fever === 'yes' && (
+              <TextField
+                fullWidth label="Temperature (°C)" type="number" variant="outlined" placeholder="e.g. 38.5"
+                value={formData.temperature} onChange={handleChange('temperature')}
+                sx={{ mb: 3, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+              />
+            )}
+
+            {/* Abdominal Pain */}
             <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1, display: 'block' }}>
-              Current Pain Level (0–10)
+              Abdominal Pain Level (0–10)
             </Typography>
             <TextField
               fullWidth type="number" inputProps={{ min: 0, max: 10 }}
-              value={formData.painLevel} onChange={handleChange('painLevel')}
+              value={formData.abd_pain} onChange={handleChange('abd_pain')}
               sx={{ mb: 3, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
+
+            {/* Lumbar/Lower Back Pain */}
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
+              Lumbar/Lower Back Pain?
+            </Typography>
+            <Grid container spacing={1.5} sx={{ mb: 3 }}>
+              <Grid size={{ xs: 6 }}><RadioCard value="yes" label="Yes" currentValue={formData.lumbar_pain} onChange={handleChange('lumbar_pain')} /></Grid>
+              <Grid size={{ xs: 6 }}><RadioCard value="no" label="No" currentValue={formData.lumbar_pain} onChange={handleChange('lumbar_pain')} /></Grid>
+            </Grid>
+
+            {/* Nausea */}
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
+              Nausea or Vomiting?
+            </Typography>
+            <Grid container spacing={1.5} sx={{ mb: 3 }}>
+              <Grid size={{ xs: 6 }}><RadioCard value="yes" label="Yes" currentValue={formData.nausea} onChange={handleChange('nausea')} /></Grid>
+              <Grid size={{ xs: 6 }}><RadioCard value="no" label="No" currentValue={formData.nausea} onChange={handleChange('nausea')} /></Grid>
+            </Grid>
+
+            {/* Dysuria */}
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
+              Difficulty Urinating (Dysuria)?
+            </Typography>
+            <Grid container spacing={1.5} sx={{ mb: 3 }}>
+              <Grid size={{ xs: 6 }}><RadioCard value="yes" label="Yes" currentValue={formData.dysuria} onChange={handleChange('dysuria')} /></Grid>
+              <Grid size={{ xs: 6 }}><RadioCard value="no" label="No" currentValue={formData.dysuria} onChange={handleChange('dysuria')} /></Grid>
+            </Grid>
+
+            {/* Urinary Urgency */}
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
+              Urinary Urgency (Pressure to urinate)?
+            </Typography>
+            <Grid container spacing={1.5} sx={{ mb: 3 }}>
+              <Grid size={{ xs: 6 }}><RadioCard value="yes" label="Yes" currentValue={formData.urine_pushing} onChange={handleChange('urine_pushing')} /></Grid>
+              <Grid size={{ xs: 6 }}><RadioCard value="no" label="No" currentValue={formData.urine_pushing} onChange={handleChange('urine_pushing')} /></Grid>
+            </Grid>
+
+            {/* Micturition Pain */}
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
+              Pain During Urination (Micturition pain)?
+            </Typography>
+            <Grid container spacing={1.5} sx={{ mb: 3 }}>
+              <Grid size={{ xs: 6 }}><RadioCard value="yes" label="Yes" currentValue={formData.micturition_pain} onChange={handleChange('micturition_pain')} /></Grid>
+              <Grid size={{ xs: 6 }}><RadioCard value="no" label="No" currentValue={formData.micturition_pain} onChange={handleChange('micturition_pain')} /></Grid>
+            </Grid>
+
+            {/* Urethral Burning */}
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
+              Burning Sensation During Urination?
+            </Typography>
+            <Grid container spacing={1.5}>
+              <Grid size={{ xs: 6 }}><RadioCard value="yes" label="Yes" currentValue={formData.urethral_burning} onChange={handleChange('urethral_burning')} /></Grid>
+              <Grid size={{ xs: 6 }}><RadioCard value="no" label="No" currentValue={formData.urethral_burning} onChange={handleChange('urethral_burning')} /></Grid>
+            </Grid>
+          </Box>
+        );
+      case 2:
+        return (
+          <Box>
+            <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>Lifestyle & Medical History</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Lifestyle factors and medical history play a significant role in urinary tract health.
+            </Typography>
+
+            {/* Family History */}
             <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
               Family History of Kidney Stones / UTI?
             </Typography>
@@ -154,22 +312,17 @@ const Questionnaire = ({ onComplete }) => {
               <Grid size={{ xs: 6 }}><RadioCard value="yes" label="Yes" currentValue={formData.history} onChange={handleChange('history')} /></Grid>
               <Grid size={{ xs: 6 }}><RadioCard value="no" label="No" currentValue={formData.history} onChange={handleChange('history')} /></Grid>
             </Grid>
+
+            {/* Currently on Medication */}
             <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
               Currently on medication?
             </Typography>
-            <Grid container spacing={1.5}>
+            <Grid container spacing={1.5} sx={{ mb: 3 }}>
               <Grid size={{ xs: 6 }}><RadioCard value="yes" label="Yes" currentValue={formData.medication} onChange={handleChange('medication')} /></Grid>
               <Grid size={{ xs: 6 }}><RadioCard value="no" label="No" currentValue={formData.medication} onChange={handleChange('medication')} /></Grid>
             </Grid>
-          </Box>
-        );
-      case 2:
-        return (
-          <Box>
-            <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>Lifestyle & Habits</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Lifestyle factors play a significant role in urinary tract health.
-            </Typography>
+
+            {/* Daily Water Intake */}
             <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
               Daily Water Intake
             </Typography>
@@ -178,6 +331,8 @@ const Questionnaire = ({ onComplete }) => {
               <Grid size={{ xs: 4 }}><RadioCard value="adequate" label="Adequate (1-2L)" currentValue={formData.hydration} onChange={handleChange('hydration')} /></Grid>
               <Grid size={{ xs: 4 }}><RadioCard value="high" label="High (> 2L)" currentValue={formData.hydration} onChange={handleChange('hydration')} /></Grid>
             </Grid>
+
+            {/* Dietary Habits */}
             <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
               Dietary Habits
             </Typography>
@@ -196,6 +351,8 @@ const Questionnaire = ({ onComplete }) => {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               These symptoms are directly correlated with urinary tract and renal conditions.
             </Typography>
+
+            {/* Urinary Frequency */}
             <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
               Urinary Frequency
             </Typography>
@@ -204,20 +361,34 @@ const Questionnaire = ({ onComplete }) => {
               <Grid size={{ xs: 4 }}><RadioCard value="frequent" label="Frequent" currentValue={formData.urinaryFrequency} onChange={handleChange('urinaryFrequency')} /></Grid>
               <Grid size={{ xs: 4 }}><RadioCard value="reduced" label="Reduced" currentValue={formData.urinaryFrequency} onChange={handleChange('urinaryFrequency')} /></Grid>
             </Grid>
+
+            {/* Excessive Urination */}
             <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
-              Blood in urine?
+              Excessive/Polyuria (Unable to retain urine)?
+            </Typography>
+            <Grid container spacing={1.5} sx={{ mb: 3 }}>
+              <Grid size={{ xs: 6 }}><RadioCard value="yes" label="Yes" currentValue={formData.polyuria} onChange={handleChange('polyuria')} /></Grid>
+              <Grid size={{ xs: 6 }}><RadioCard value="no" label="No" currentValue={formData.polyuria} onChange={handleChange('polyuria')} /></Grid>
+            </Grid>
+
+            {/* Blood in Urine */}
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
+              Blood in Urine (Haematuria)?
             </Typography>
             <Grid container spacing={1.5} sx={{ mb: 3 }}>
               <Grid size={{ xs: 6 }}><RadioCard value="yes" label="Yes" currentValue={formData.bloodInUrine} onChange={handleChange('bloodInUrine')} /></Grid>
               <Grid size={{ xs: 6 }}><RadioCard value="no" label="No" currentValue={formData.bloodInUrine} onChange={handleChange('bloodInUrine')} /></Grid>
             </Grid>
-            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>
-              Burning sensation during urination?
+
+            {/* General Pain */}
+            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1, display: 'block' }}>
+              Current Pain Level (0–10)
             </Typography>
-            <Grid container spacing={1.5}>
-              <Grid size={{ xs: 6 }}><RadioCard value="yes" label="Yes" currentValue={formData.burning} onChange={handleChange('burning')} /></Grid>
-              <Grid size={{ xs: 6 }}><RadioCard value="no" label="No" currentValue={formData.burning} onChange={handleChange('burning')} /></Grid>
-            </Grid>
+            <TextField
+              fullWidth type="number" inputProps={{ min: 0, max: 10 }}
+              value={formData.painLevel} onChange={handleChange('painLevel')}
+              sx={{ mb: 0, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+            />
           </Box>
         );
       default: return null;

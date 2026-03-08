@@ -205,7 +205,10 @@ const PatientPortal = () => {
       )}
 
       {currentView === 'analysis' && (
-        <Questionnaire onComplete={handleQuestionnaireComplete} />
+        <Questionnaire 
+          reportId={latestResult?.id} 
+          onComplete={handleQuestionnaireComplete} 
+        />
       )}
 
       {currentView === 'results' && (

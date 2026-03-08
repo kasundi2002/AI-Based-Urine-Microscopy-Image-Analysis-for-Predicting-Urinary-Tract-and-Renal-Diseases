@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
-import { getReports, uploadImage, getReport, verifyReport } from '../controllers/reportController.js';
+import { getReports, uploadImage, getReport, verifyReport, submitQuestionnaire } from '../controllers/reportController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -48,5 +48,8 @@ router.route('/:id')
 
 router.route('/:id/verify')
     .put(protect, authorize('CLINICIAN'), verifyReport);
+
+router.route('/:id/submit-questionnaire')
+    .post(submitQuestionnaire); // Public endpoint for patients with valid report link
 
 export default router;
