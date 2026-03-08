@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme, alpha } from '@mui/material/styles';
-import { Box, Grid, Paper, Typography, Chip, Avatar, LinearProgress } from '@mui/material';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { Box, Grid, Paper, Typography, Chip, Avatar, LinearProgress, CircularProgress } from '@mui/material';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import ScienceIcon from '@mui/icons-material/Science';
@@ -15,31 +15,7 @@ import BugReportIcon from '@mui/icons-material/BugReport';
 import SpeedIcon from '@mui/icons-material/Speed';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-
-const trendData = [
-  { name: 'Mon', samples: 18, high: 3 },
-  { name: 'Tue', samples: 24, high: 5 },
-  { name: 'Wed', samples: 22, high: 2 },
-  { name: 'Thu', samples: 28, high: 6 },
-  { name: 'Fri', samples: 32, high: 4 },
-  { name: 'Sat', samples: 15, high: 1 },
-  { name: 'Sun', samples: 12, high: 2 },
-];
-
-const sedimentBarData = [
-  { name: 'WBC', count: 68, color: '#00bcd4' },
-  { name: 'RBC', count: 42, color: '#ef5350' },
-  { name: 'Crystals', count: 35, color: '#ff9100' },
-  { name: 'Cast', count: 12, color: '#ab47bc' },
-  { name: 'Bacteria', count: 28, color: '#66bb6a' },
-];
-
-const recentActivity = [
-  { patient: 'Kane Peter', id: 'P01', action: 'Analysis Complete', risk: 'Low', time: '2 min ago', color: '#66bb6a' },
-  { patient: 'Amara Silva', id: 'P02', action: 'High Risk Flagged', risk: 'High', time: '15 min ago', color: '#ef5350' },
-  { patient: 'David Cruz', id: 'P03', action: 'Report Submitted', risk: 'Normal', time: '32 min ago', color: '#66bb6a' },
-  { patient: 'Lisa Chen', id: 'P04', action: 'Awaiting Review', risk: 'Moderate', time: '1 hr ago', color: '#ff9100' },
-];
+import { api } from '../../services/api';
 
 const StatCard = ({ title, value, subtitle, icon, color, trend }) => (
   <Paper
@@ -55,17 +31,19 @@ const StatCard = ({ title, value, subtitle, icon, color, trend }) => (
       <Box sx={{ p: 1.2, borderRadius: 2.5, bgcolor: alpha(color, 0.08), color, display: 'flex' }}>
         {React.cloneElement(icon, { sx: { fontSize: 22 } })}
       </Box>
-      <Chip
-        icon={trend > 0 ? <TrendingUpIcon sx={{ fontSize: 14 }} /> : <TrendingDownIcon sx={{ fontSize: 14 }} />}
-        label={`${trend > 0 ? '+' : ''}${trend}%`}
-        size="small"
-        sx={{
-          bgcolor: trend > 0 ? alpha('#66bb6a', 0.1) : alpha('#ef5350', 0.1),
-          color: trend > 0 ? '#66bb6a' : '#ef5350',
-          fontWeight: 700, fontSize: '0.7rem', height: 24,
-          '& .MuiChip-icon': { color: trend > 0 ? '#66bb6a' : '#ef5350' }
-        }}
-      />
+      {trend !== undefined && (
+        <Chip
+          icon={trend >= 0 ? <TrendingUpIcon sx={{ fontSize: 14 }} /> : <TrendingDownIcon sx={{ fontSize: 14 }} />}
+          label={`${trend > 0 ? '+' : ''}${trend}%`}
+          size="small"
+          sx={{
+            bgcolor: trend >= 0 ? alpha('#66bb6a', 0.1) : alpha('#ef5350', 0.1),
+            color: trend >= 0 ? '#66bb6a' : '#ef5350',
+            fontWeight: 700, fontSize: '0.7rem', height: 24,
+            '& .MuiChip-icon': { color: trend >= 0 ? '#66bb6a' : '#ef5350' }
+          }}
+        />
+      )}
     </Box>
     <Typography variant="h3" fontWeight={800} sx={{ letterSpacing: -1, mb: 0.5 }}>{value}</Typography>
     <Typography variant="body2" fontWeight={600} color="text.secondary">{title}</Typography>
@@ -73,9 +51,123 @@ const StatCard = ({ title, value, subtitle, icon, color, trend }) => (
   </Paper>
 );
 
-
 const StatsDashboard = () => {
   const theme = useTheme();
+  const [patients, setPatients] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [pData, rData] = await Promise.all([
+          api.getPatients(),
+          api.getAllReports()
+        ]);
+        setPatients(pData);
+        setReports(rData);
+      } catch (err) {
+        console.error('Failed to fetch dashboard data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <CircularProgress sx={{ color: '#00bcd4' }} />
+      </Box>
+    );
+  }
+
+  // Calculate Stat Cards
+  const todayStr = new Date().toDateString();
+  const samplesToday = reports.filter(r => new Date(r.createdAt).toDateString() === todayStr).length;
+  const pendingReviews = patients.filter(p => p.status === 'Ready for Review' || p.status === 'Awaiting Analysis').length;
+  const criticalFindings = patients.filter(p => p.riskAssessment === 'High' || p.riskAssessment === 'Critical').length;
+  const completedReports = patients.filter(p => p.status === 'Completed').length;
+
+  // Trend Data (Last 7 Days)
+  const trendData = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toDateString();
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+    
+    const dayReports = reports.filter(r => new Date(r.createdAt).toDateString() === dateStr);
+    
+    const dayHighRisk = dayReports.filter(r => {
+      if (!r.patientId) return false;
+      const pId = typeof r.patientId === 'object' ? r.patientId._id : r.patientId;
+      const patient = patients.find(p => p._id === pId);
+      return patient && (patient.riskAssessment === 'High' || patient.riskAssessment === 'Critical');
+    }).length;
+    
+    trendData.push({ name: dayName, samples: dayReports.length, high: dayHighRisk });
+  }
+
+  // Sediment Distribution
+  let wbcCount = 0, rbcCount = 0, crystalsCount = 0, castsCount = 0, bacteriaCount = 0;
+  reports.forEach(r => {
+    if (r.analysis) {
+      wbcCount += r.analysis.wbc?.total_count || 0;
+      rbcCount += r.analysis.rbc?.total_count || 0;
+      crystalsCount += r.analysis.crystals?.total_count || 0;
+      castsCount += r.analysis.casts?.total_count || 0;
+      bacteriaCount += r.analysis.bacteria?.total_count || 0;
+    }
+  });
+  
+  const totalSediments = Math.max(1, wbcCount + rbcCount + crystalsCount + castsCount + bacteriaCount);
+
+  const sedimentDistData = [
+    { name: 'WBC', count: wbcCount, total: totalSediments, color: '#00bcd4', icon: <ShieldIcon sx={{ fontSize: 16 }} /> },
+    { name: 'RBC', count: rbcCount, total: totalSediments, color: '#ef5350', icon: <BloodtypeIcon sx={{ fontSize: 16 }} /> },
+    { name: 'Crystals', count: crystalsCount, total: totalSediments, color: '#ff9100', icon: <DiamondIcon sx={{ fontSize: 16 }} /> },
+    { name: 'Cast', count: castsCount, total: totalSediments, color: '#ab47bc', icon: <ScienceIcon sx={{ fontSize: 16 }} /> },
+    { name: 'Bacteria', count: bacteriaCount, total: totalSediments, color: '#66bb6a', icon: <BugReportIcon sx={{ fontSize: 16 }} /> },
+  ];
+
+  // Recent Activity
+  const recentActivityData = patients
+    .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
+    .slice(0, 4)
+    .map(p => {
+      let color = '#9e9e9e';
+      if (p.riskAssessment === 'High' || p.riskAssessment === 'Critical') color = '#ef5350';
+      else if (p.riskAssessment === 'Moderate') color = '#ff9100';
+      else if (p.riskAssessment === 'Normal' || p.riskAssessment === 'Low') color = '#66bb6a';
+      else if (p.status === 'Ready for Review') color = '#00bcd4';
+      
+      let action = 'Registered';
+      if (p.status === 'Completed') action = 'Analysis Complete';
+      else if (p.status === 'Ready for Review') action = 'Awaiting Review';
+      else if (p.status === 'Awaiting Analysis') action = 'Awaiting Analysis';
+      
+      const timeDiffMs = Math.max(0, new Date() - new Date(p.updatedAt || p.createdAt));
+      const mins = Math.floor(timeDiffMs / 60000);
+      const hrs = Math.floor(mins / 60);
+      const days = Math.floor(hrs / 24);
+      
+      let timeStr = 'Just now';
+      if (days > 0) timeStr = `${days}d ago`;
+      else if (hrs > 0) timeStr = `${hrs}h ago`;
+      else if (mins > 0) timeStr = `${mins}m ago`;
+
+      return {
+        patient: p.name || 'Unknown',
+        id: p.patientId || '—',
+        action: action,
+        risk: p.riskAssessment || 'Pending',
+        time: timeStr,
+        color: color
+      };
+    });
 
   return (
     <Box sx={{ animation: 'fadeIn 0.4s ease-out' }}>
@@ -105,16 +197,16 @@ const StatsDashboard = () => {
       {/* Stat Cards */}
       <Grid container spacing={2.5} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard title="Samples Analyzed" value="145" subtitle="Today's total" icon={<ScienceIcon />} color="#00bcd4" trend={12} />
+          <StatCard title="Samples Analyzed" value={samplesToday} subtitle="Today's total" icon={<ScienceIcon />} color="#00bcd4" />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard title="Pending Reviews" value="24" subtitle="Needs attention" icon={<AssignmentLateIcon />} color="#ff9100" trend={-5} />
+          <StatCard title="Pending Reviews" value={pendingReviews} subtitle="Needs attention" icon={<AssignmentLateIcon />} color="#ff9100" />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard title="Critical Findings" value="8" subtitle="High risk cases" icon={<WarningAmberIcon />} color="#ef5350" trend={3} />
+          <StatCard title="Critical Findings" value={criticalFindings} subtitle="High risk cases" icon={<WarningAmberIcon />} color="#ef5350" />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard title="Completed Reports" value="121" subtitle="Signed by clinicians" icon={<CheckCircleIcon />} color="#66bb6a" trend={18} />
+          <StatCard title="Completed Reports" value={completedReports} subtitle="Signed by clinicians" icon={<CheckCircleIcon />} color="#66bb6a" />
         </Grid>
       </Grid>
 
@@ -175,13 +267,7 @@ const StatsDashboard = () => {
               <Typography variant="caption" color="text.secondary">Detections this week</Typography>
             </Box>
             <Box sx={{ p: 2, flexGrow: 1 }}>
-              {[
-                { name: 'WBC', count: 68, total: 145, color: '#00bcd4', icon: <ShieldIcon sx={{ fontSize: 16 }} /> },
-                { name: 'RBC', count: 42, total: 145, color: '#ef5350', icon: <BloodtypeIcon sx={{ fontSize: 16 }} /> },
-                { name: 'Crystals', count: 35, total: 145, color: '#ff9100', icon: <DiamondIcon sx={{ fontSize: 16 }} /> },
-                { name: 'Cast', count: 12, total: 145, color: '#ab47bc', icon: <ScienceIcon sx={{ fontSize: 16 }} /> },
-                { name: 'Bacteria', count: 28, total: 145, color: '#66bb6a', icon: <BugReportIcon sx={{ fontSize: 16 }} /> },
-              ].map((item, i) => (
+              {sedimentDistData.map((item, i) => (
                 <Box key={i} sx={{
                   p: 1.5, mb: 1, borderRadius: 2,
                   transition: 'all 0.2s',
@@ -217,13 +303,13 @@ const StatsDashboard = () => {
           <Chip label="View All" size="small" variant="outlined" clickable sx={{ fontWeight: 600, fontSize: '0.7rem' }} />
         </Box>
         <Box>
-          {recentActivity.map((item, i) => (
+          {recentActivityData.map((item, i) => (
             <Box
               key={i}
               sx={{
                 px: 3, py: 2,
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                borderBottom: i < recentActivity.length - 1 ? '1px solid' : 'none', borderColor: 'divider',
+                borderBottom: i < recentActivityData.length - 1 ? '1px solid' : 'none', borderColor: 'divider',
                 transition: 'all 0.15s',
                 '&:hover': { bgcolor: alpha('#00bcd4', 0.02) }
               }}

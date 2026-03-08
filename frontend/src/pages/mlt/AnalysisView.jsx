@@ -77,9 +77,16 @@ const StatChip = styled(Paper)(({ theme }) => ({
 
 const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnalysis, onReAnalysis, onAddChemicalParams }) => {
   const { submitLabResult } = useLabData();
-  const [submitted, setSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState(patient?.status === 'Ready for Review' || patient?.status === 'Completed');
   const [showSuccess, setShowSuccess] = useState(false);
   const [zoom, setZoom] = useState(1);
+
+  // Keep submitted state in sync if patient prop changes
+  useEffect(() => {
+    if (patient) {
+      setSubmitted(patient.status === 'Ready for Review' || patient.status === 'Completed');
+    }
+  }, [patient]);
 
   const imgRef = useRef(null);
   const canvasRef = useRef(null);
@@ -287,6 +294,9 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
           chemicalParameters: chemicalParameters,
           riskLevel: riskLevel
         });
+        
+        // Optimistically update the patient reference so it doesn't revert on minimal re-renders
+        patient.status = 'Ready for Review';
       }
 
       submitLabResult({
