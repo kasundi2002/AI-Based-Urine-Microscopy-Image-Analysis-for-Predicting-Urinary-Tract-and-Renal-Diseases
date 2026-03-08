@@ -49,6 +49,16 @@ function App() {
       <Route path="/patient-verify" element={<PatientVerification />} />
       <Route path="/patient-otp" element={<PatientOTP />} />
       
+      {/* Patient portal — standalone page, no sidebar */}
+      <Route 
+        path="/patient-portal" 
+        element={
+          <PatientPrivateRoute>
+            <PatientPortal />
+          </PatientPrivateRoute>
+        } 
+      />
+      
       <Route path="/" element={<Layout />}>
         <Route index element={<Navigate to="/login" />} />
         
@@ -67,15 +77,6 @@ function App() {
             <PrivateRoute allowedRoles={['CLINICIAN']}>
               <ClinicianDashboard />
             </PrivateRoute>
-          } 
-        />
-        
-        <Route 
-          path="patient-portal" 
-          element={
-            <PatientPrivateRoute>
-              <PatientPortal />
-            </PatientPrivateRoute>
           } 
         />
         

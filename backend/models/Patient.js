@@ -25,7 +25,7 @@ const patientSchema = new mongoose.Schema({
     },
     riskAssessment: {
         type: String,
-        enum: ['Normal', 'Pending', 'High', 'Low', 'Critical'],
+        enum: ['Normal', 'Pending', 'High', 'Low', 'Critical', 'Moderate'],
         default: 'Pending'
     },
     email: {
@@ -54,6 +54,10 @@ const patientSchema = new mongoose.Schema({
     dateAssigned: {
         type: Date,
         default: Date.now
+    },
+    emailSent: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

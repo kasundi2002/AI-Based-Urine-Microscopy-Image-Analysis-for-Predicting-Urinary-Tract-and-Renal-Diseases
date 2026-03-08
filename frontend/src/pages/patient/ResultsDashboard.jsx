@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Paper, Grid, Chip, Button, Avatar } from '@mui/material';
+import { Box, Typography, Paper, Grid, Chip, Button, Avatar, Table, TableBody, TableRow, TableCell } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
@@ -203,6 +203,57 @@ const ResultsDashboard = ({ report, patientName }) => {
             </Typography>
           </Paper>
         </Grid>
+
+        {/* Chemical Analysis */}
+        {report.chemicalParameters && (
+          <Grid size={{ xs: 12 }}>
+            <Paper elevation={0} sx={{ borderRadius: 3, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
+              <Box sx={{ px: 3, py: 2, background: 'linear-gradient(135deg, #0f172a, #1e3a5f)', color: 'white' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight={700}>Chemical Analysis Report</Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.7 }}>Urine full report parameters</Typography>
+                  </Box>
+                  <Chip label="Lab Verified" size="small" sx={{ bgcolor: alpha('#66bb6a', 0.2), color: '#a5d6a7', fontWeight: 700, fontSize: '0.7rem', border: '1px solid', borderColor: alpha('#66bb6a', 0.3) }} />
+                </Box>
+              </Box>
+              <Table size="small">
+                <TableBody>
+                  {[
+                    { label: 'Colour', value: report.chemicalParameters.colour },
+                    { label: 'Appearance', value: report.chemicalParameters.appearance },
+                    { label: 'S.G. (Refractometer)', value: report.chemicalParameters.specificGravity },
+                    { label: 'pH', value: report.chemicalParameters.pH },
+                    { label: 'Protein', value: report.chemicalParameters.protein },
+                    { label: 'Glucose', value: report.chemicalParameters.glucose },
+                    { label: 'Ketone Bodies', value: report.chemicalParameters.ketoneBodies },
+                    { label: 'Bilirubin', value: report.chemicalParameters.bilirubin },
+                    { label: 'Nitrite', value: report.chemicalParameters.nitrite },
+                    { label: 'Urobilinogen', value: report.chemicalParameters.urobilinogen },
+                    { label: 'Blood (Occult)', value: report.chemicalParameters.blood },
+                  ].map((row, i) => {
+                    const isAbnormal = (() => {
+                      const v = row.value;
+                      if (['Protein', 'Glucose', 'Ketone Bodies', 'Bilirubin'].includes(row.label) || row.label.includes('Blood')) return v !== 'Nil';
+                      if (row.label === 'Nitrite') return v === 'Positive';
+                      if (row.label === 'Urobilinogen') return v === 'Elevated';
+                      return false;
+                    })();
+                    return (
+                      <TableRow key={i} sx={{ '&:last-child td': { borderBottom: 0 }, bgcolor: isAbnormal ? alpha('#ef5350', 0.04) : 'transparent' }}>
+                        <TableCell sx={{ pl: 3, py: 1.2, width: '45%', fontWeight: 600, fontSize: '0.82rem', color: 'text.secondary' }}>{row.label}</TableCell>
+                        <TableCell sx={{ py: 1.2, fontWeight: 700, fontSize: '0.85rem', color: isAbnormal ? '#ef5350' : 'text.primary' }}>
+                          {row.value || '—'}
+                          {isAbnormal && <Chip label="Abnormal" size="small" sx={{ ml: 1, height: 18, fontSize: '0.6rem', fontWeight: 700, bgcolor: alpha('#ef5350', 0.1), color: '#ef5350' }} />}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </Paper>
+          </Grid>
+        )}
 
         {/* Doctor's Recommendations */}
         <Grid size={{ xs: 12 }}>

@@ -1,9 +1,8 @@
 class YeastPredictor:
-    """Simple rule-based predictor for yeast counts."""
-
-    def decide_uti(self, yeast_count: int) -> str:
-        # same rule as kasundi/uti_rules: yeast_count >=3 triggers UTI
+    def decide_risk(self, yeast_count: int) -> str | None:
         if yeast_count >= 3:
-            return "UTI Positive"
+            return "Possible Yeast Infection"
+        elif yeast_count > 0:
+            return "Low Yeast Presence"
         else:
-            return "UTI Negative"
+            return None

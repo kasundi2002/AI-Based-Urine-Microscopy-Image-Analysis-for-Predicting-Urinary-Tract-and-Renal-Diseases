@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, Typography, Paper, Grid, Table, TableBody, TableCell, TableRow, Button, Snackbar, Alert, Chip, LinearProgress, Divider, IconButton, Tooltip, Avatar } from '@mui/material';
 import { styled, alpha } from '@mui/material/styles';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ReplayIcon from '@mui/icons-material/Replay';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import SendIcon from '@mui/icons-material/Send';
@@ -19,6 +20,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import SpeedIcon from '@mui/icons-material/Speed';
 import { useLabData } from '../../context/LabDataContext';
+import { api } from '../../services/api';
 
 const ImageContainer = styled(Box)(({ theme }) => ({
   position: 'relative',
@@ -73,33 +75,50 @@ const StatChip = styled(Paper)(({ theme }) => ({
   }
 }));
 
-const AnalysisView = ({ image, analysis, patient }) => {
+const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnalysis, onReAnalysis, onAddChemicalParams }) => {
   const { submitLabResult } = useLabData();
   const [submitted, setSubmitted] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [zoom, setZoom] = useState(1);
 
   const imgRef = useRef(null);
   const canvasRef = useRef(null);
+  const imagePanelRef = useRef(null);
+
+  const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 4));
+  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.5));
+  const handleResetZoom = () => setZoom(1);
+  const handleFullscreen = () => {
+    if (imagePanelRef.current) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        imagePanelRef.current.requestFullscreen();
+      }
+    }
+  };
 
   const drawBoxes = () => {
     const img = imgRef.current;
     const canvas = canvasRef.current;
     if (!img || !canvas || !analysis) return;
 
-    // Dynamic bounding match mapping against DOM scaled width
-    const rect = img.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
+    // Use offsetWidth/Height instead of getBoundingClientRect
+    // because getBoundingClientRect is affected by CSS transforms (zoom scale)
+    const displayWidth = img.offsetWidth;
+    const displayHeight = img.offsetHeight;
+    canvas.width = displayWidth;
+    canvas.height = displayHeight;
 
-    // Relative ratios scaling boxes from absolute raw dimensions down to display rect widths
-    const scaleX = rect.width / img.naturalWidth;
-    const scaleY = rect.height / img.naturalHeight;
+    const scaleX = displayWidth / img.naturalWidth;
+    const scaleY = displayHeight / img.naturalHeight;
 
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     Object.entries(analysis).forEach(([particleName, data]) => {
       if (!data || !data.detected) return;
+      if (particleName === "yeast") return; // hide yeast boundary boxes on canvas
 
       data.boxes.forEach(box => {
         const [rawX1, rawY1, rawX2, rawY2] = box.bbox;
@@ -111,21 +130,26 @@ const AnalysisView = ({ image, analysis, patient }) => {
         const y2 = rawY2 * scaleY;
 
         if (particleName === "casts") {
-          ctx.strokeStyle = "red";
+          ctx.strokeStyle = "green"; // user request: green
           ctx.lineWidth = 2;
         } else if (particleName === "crystals") {
-          ctx.strokeStyle = "blue";
+          ctx.strokeStyle = "blue"; // user request: blue
           ctx.lineWidth = 2;
         } else if (particleName === "wbc") {
-          ctx.strokeStyle = "green";
-          ctx.lineWidth = 2;
-        } else if (particleName === "bacteria") {
-          ctx.strokeStyle = "orange";
+          ctx.strokeStyle = "purple"; // user request: purple
           ctx.lineWidth = 2;
         } else if (particleName === "rbc") {
-          console.log("Drawing RBC box:", box);
-          ctx.strokeStyle = "purple";
+          ctx.strokeStyle = "red"; // user request: red
           ctx.lineWidth = 1;
+        } else if (particleName === "yeast") {
+          ctx.strokeStyle = "#ff9800"; // orange a good distinct color for yeast
+          ctx.lineWidth = 2;
+        } else if (particleName === "bacteria") {
+          ctx.strokeStyle = "cyan"; // cyan a distinct color for bacteria
+          ctx.lineWidth = 2;
+        } else {
+          ctx.strokeStyle = "white";
+          ctx.lineWidth = 2;
         }
         // } else {
         //   ctx.strokeStyle = "cyan";
@@ -136,8 +160,21 @@ const AnalysisView = ({ image, analysis, patient }) => {
 
         ctx.font = "14px Arial";
         ctx.fillStyle = ctx.strokeStyle;
+
+        let labelText = box.subtype || particleName;
+        if (particleName === "casts" && box.subtype) {
+          // Format specific Cast subtitles properly adding suffixes
+          const st = box.subtype.trim();
+          const upperSt = st.toUpperCase();
+          if (upperSt === "WBC" || upperSt === "RBC") {
+            labelText = `${upperSt} Cast`;
+          } else {
+            labelText = `${st.charAt(0).toUpperCase() + st.slice(1)} Cast`;
+          }
+        }
+
         ctx.fillText(
-          box.subtype || particleName,
+          labelText,
           x1,
           y1 - 5
         );
@@ -155,8 +192,9 @@ const AnalysisView = ({ image, analysis, patient }) => {
   const castsData = analysis?.casts || {};
   const wbcData = analysis?.wbc || {};
   const rbcData = analysis?.rbc || {};
+  const yeastData = analysis?.yeast || {};
 
-  const totalObjects = (crystalsData.total_count || 0) + (castsData.total_count || 0) + (wbcData.total_count || 0) + (rbcData.total_count || 0);
+  const totalObjects = (crystalsData.total_count || 0) + (castsData.total_count || 0) + (wbcData.total_count || 0) + (rbcData.total_count || 0) + (yeastData.total_count || 0);
 
   let riskLevel = 'Low Risk';
   let riskColor = '#66bb6a';
@@ -164,23 +202,33 @@ const AnalysisView = ({ image, analysis, patient }) => {
   const castRisk = castsData.risk_assessment?.level;
   const wbcRisk = wbcData.risk_assessment?.level;
   const rbcRisk = rbcData.risk_assessment?.level;
+  const yeastRisk = yeastData.risk_assessment?.level;
 
-  if (cRisk === 'High' || castRisk === 'High Risk' || wbcRisk === 'UTI Positive' || rbcRisk === 'High Dysmorphic Presence') {
+  if (cRisk === 'High' || castRisk === 'High Risk' || wbcRisk === 'UTI Positive' || rbcRisk === 'High Dysmorphic Presence' || yeastRisk === 'Possible Yeast Infection') {
     riskLevel = 'High Risk';
     riskColor = '#ef5350';
-  } else if (cRisk === 'Moderate' || castRisk === 'Moderate Risk' || rbcRisk === 'Moderate Dysmorphic Presence') {
+  } else if (cRisk === 'Moderate' || castRisk === 'Moderate Risk' || rbcRisk === 'Moderate Dysmorphic Presence' || yeastRisk === 'Low Yeast Presence') {
     riskLevel = 'Moderate Risk';
     riskColor = '#ff9100';
   }
+
+  // Only these 4 crystal types are detected by the ML model
+  const CRYSTAL_TYPES = ['CaOx_Dihydrate', 'CaOx_Monohydrate', 'Phosphate', 'Uric_Acid'];
+  const CRYSTAL_DISPLAY_NAMES = {
+    'CaOx_Dihydrate': 'CaOx Dihydrate',
+    'CaOx_Monohydrate': 'CaOx Monohydrate',
+    'Phosphate': 'Phosphate',
+    'Uric_Acid': 'Uric Acid',
+  };
 
   const particles = [
     {
       name: 'Crystals',
       count: crystalsData.total_count || 0,
-      types: crystalsData.subtype_summary && Object.keys(crystalsData.subtype_summary).length > 0
-        ? Object.entries(crystalsData.subtype_summary).map(([k, v]) => `${k}: ${v}`).join(' · ')
+      types: crystalsData.total_count > 0
+        ? CRYSTAL_TYPES.map(t => `${CRYSTAL_DISPLAY_NAMES[t]}: ${crystalsData.subtype_summary?.[t] || 0}`).join(' · ')
         : 'Not detected',
-      color: '#ff9100',
+      color: '#2196f3', // blue
       icon: <DiamondIcon sx={{ fontSize: 18 }} />,
       confidence: crystalsData.total_count > 0 ? 96 : 99
     },
@@ -190,7 +238,7 @@ const AnalysisView = ({ image, analysis, patient }) => {
       types: castsData.subtype_summary && Object.keys(castsData.subtype_summary).length > 0
         ? Object.entries(castsData.subtype_summary).map(([k, v]) => `${k}: ${v}`).join(' · ')
         : 'Not detected',
-      color: '#ab47bc',
+      color: '#4caf50', // green
       icon: <BiotechIcon sx={{ fontSize: 18 }} />,
       confidence: castsData.total_count > 0 ? 92 : 99
     },
@@ -198,7 +246,7 @@ const AnalysisView = ({ image, analysis, patient }) => {
       name: 'WBC',
       count: wbcData.total_count || 0,
       types: wbcData.total_count > 0 ? wbcRisk : 'Not detected',
-      color: '#00bcd4',
+      color: '#9c27b0', // purple
       icon: <ShieldIcon sx={{ fontSize: 18 }} />,
       confidence: wbcData.total_count > 0 ? 94 : 99
     },
@@ -208,33 +256,65 @@ const AnalysisView = ({ image, analysis, patient }) => {
       types: rbcData.subtype_summary && Object.keys(rbcData.subtype_summary).length > 0
         ? Object.entries(rbcData.subtype_summary).map(([k, v]) => `${k}: ${v}`).join(' · ')
         : 'Not detected',
-      color: '#ef5350',
+      color: '#f44336', // red
       icon: <BloodtypeIcon sx={{ fontSize: 18 }} />,
       confidence: rbcData.total_count > 0 ? 98 : 99
     },
-    { name: 'Bacteria', count: 0, types: 'N/A (ML module pending)', color: '#66bb6a', icon: <BugReportIcon sx={{ fontSize: 18 }} />, confidence: 100 },
+    {
+      name: 'Yeast',
+      count: yeastData.total_count || 0,
+      types: yeastData.total_count > 0 ? yeastRisk : 'Not detected',
+      color: '#ff9800',
+      icon: <ScienceIcon sx={{ fontSize: 18 }} />,
+      confidence: yeastData.total_count > 0 ? 95 : 99
+    },
+    {
+      name: 'Bacteria',
+      count: analysis?.bacteria?.total_count || 0,
+      types: analysis?.bacteria?.total_count > 0 ? analysis.bacteria.risk_assessment.level : 'Not detected',
+      color: '#00bcd4', // cyan
+      icon: <BugReportIcon sx={{ fontSize: 18 }} />,
+      confidence: analysis?.bacteria?.total_count > 0 ? 98 : 99
+    },
   ];
 
   const clinicalSuggestion = crystalsData.risk_assessment?.clinical_suggestion || castsData.risk_assessment?.level || "No significant abnormalities detected in Casts or Crystals.";
 
-  const handleSubmitReport = () => {
-    submitLabResult({
-      patientId: patient?.patientId || 'PAT-2023-001',
-      patientName: patient?.name || 'John Doe',
-      findings: {
-        wbc: wbcData.total_count || 0,
-        rbc: rbcData.total_count || 0,
-        crystals: crystalsData.total_count > 0 ? 'Present' : 'Absent',
-        bacteria: 'None',
-        cast: castsData.total_count > 0 ? 'Present' : 'Absent',
-      },
-      aiRiskScore: riskLevel === 'High Risk' ? 85 : riskLevel === 'Moderate Risk' ? 55 : 15,
-      image: image,
-      mltName: 'Sarah Tech',
-    });
+  const handleSubmitReport = async () => {
+    try {
+      if (patient?._id) {
+        const relativeImageUrl = image ? image.replace('http://localhost:5000', '') : '';
+        await api.submitReport({
+          patientId: patient._id,
+          imageUrl: relativeImageUrl,
+          analysis: analysis,
+          chemicalParameters: chemicalParameters,
+          riskLevel: riskLevel
+        });
+      }
 
-    setSubmitted(true);
-    setShowSuccess(true);
+      submitLabResult({
+        patientId: patient?.patientId || 'PAT-2023-001',
+        patientName: patient?.name || 'John Doe',
+        findings: {
+          wbc: wbcData.total_count || 0,
+          rbc: rbcData.total_count || 0,
+          yeast: yeastData.total_count || 0,
+          crystals: crystalsData.total_count > 0 ? 'Present' : 'Absent',
+          bacteria: 'None',
+          cast: castsData.total_count > 0 ? 'Present' : 'Absent',
+        },
+        aiRiskScore: riskLevel === 'High Risk' ? 85 : riskLevel === 'Moderate Risk' ? 55 : 15,
+        image: image,
+        mltName: 'Sarah Tech',
+      });
+
+      setSubmitted(true);
+      setShowSuccess(true);
+    } catch (error) {
+      console.error('Failed to save real report:', error);
+      alert('Failed to save report to database. Please check connection.');
+    }
   };
 
   return (
@@ -242,7 +322,7 @@ const AnalysisView = ({ image, analysis, patient }) => {
       <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
 
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
         <Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
             <ScienceIcon sx={{ color: '#00bcd4', fontSize: 28 }} />
@@ -255,9 +335,27 @@ const AnalysisView = ({ image, analysis, patient }) => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1.5 }}>
+          {onNewAnalysis && (
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              onClick={onNewAnalysis}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                borderRadius: 2,
+                borderColor: alpha('#0f172a', 0.2),
+                color: '#0f172a',
+                '&:hover': { borderColor: '#0f172a', bgcolor: alpha('#0f172a', 0.04) }
+              }}
+            >
+              New Analysis
+            </Button>
+          )}
           <Button
             variant="outlined"
             startIcon={<ReplayIcon />}
+            onClick={onReAnalysis}
             sx={{
               textTransform: 'none',
               fontWeight: 600,
@@ -269,6 +367,24 @@ const AnalysisView = ({ image, analysis, patient }) => {
           >
             Re-Analyze
           </Button>
+          {onAddChemicalParams && !chemicalParameters && (
+            <Button
+              variant="outlined"
+              startIcon={<ScienceIcon />}
+              onClick={onAddChemicalParams}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                borderRadius: 2,
+                bgcolor: alpha('#4caf50', 0.07),
+                borderColor: alpha('#4caf50', 0.3),
+                color: '#4caf50',
+                '&:hover': { borderColor: '#4caf50', bgcolor: alpha('#4caf50', 0.04) }
+              }}
+            >
+              Add Chemical Params
+            </Button>
+          )}
           <Button
             variant="contained"
             disabled={submitted}
@@ -305,7 +421,7 @@ const AnalysisView = ({ image, analysis, patient }) => {
       <Paper
         elevation={0}
         sx={{
-          p: 2.5, mb: 3, borderRadius: 3,
+          p: 1.5, mb: 1.5, borderRadius: 3,
           border: '1px solid', borderColor: 'divider',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2
         }}
@@ -359,13 +475,13 @@ const AnalysisView = ({ image, analysis, patient }) => {
       </Paper>
 
       {/* Main Content: Image + Findings */}
-      <Grid container spacing={3}>
+      <Grid container spacing={2}>
         {/* Microscopy Image */}
         <Grid size={{ xs: 12, md: 7 }}>
           <Paper
             elevation={0}
             sx={{
-              height: 520, borderRadius: 3, overflow: 'hidden',
+              height: 440, borderRadius: 3, overflow: 'hidden',
               border: '1px solid', borderColor: 'divider',
               display: 'flex', flexDirection: 'column'
             }}
@@ -378,20 +494,20 @@ const AnalysisView = ({ image, analysis, patient }) => {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#66bb6a' }} />
                 <Typography variant="caption" fontWeight={600} color="text.secondary">MICROSCOPY VIEW</Typography>
-                <Chip label="400x" size="small" variant="outlined" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700 }} />
+                <Chip label={`${Math.round(zoom * 100)}%`} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700 }} />
               </Box>
               <Box sx={{ display: 'flex', gap: 0.5 }}>
-                <Tooltip title="Zoom In"><IconButton size="small"><ZoomInIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
-                <Tooltip title="Zoom Out"><IconButton size="small"><ZoomOutIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
-                <Tooltip title="Focus"><IconButton size="small"><CenterFocusStrongIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
-                <Tooltip title="Fullscreen"><IconButton size="small"><FullscreenIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
+                <Tooltip title="Zoom In"><IconButton size="small" onClick={handleZoomIn}><ZoomInIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
+                <Tooltip title="Zoom Out"><IconButton size="small" onClick={handleZoomOut}><ZoomOutIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
+                <Tooltip title="Reset Zoom"><IconButton size="small" onClick={handleResetZoom}><CenterFocusStrongIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
+                <Tooltip title="Fullscreen"><IconButton size="small" onClick={handleFullscreen}><FullscreenIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
               </Box>
             </Box>
 
             {/* Image */}
-            <Box sx={{ flexGrow: 1, position: 'relative', overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ImageContainer sx={{ overflow: 'auto', bgcolor: '#f8f9fa' }}>
-                <div style={{ position: "relative", display: "inline-block" }}>
+            <Box ref={imagePanelRef} sx={{ flexGrow: 1, position: 'relative', overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#f8f9fa' }}>
+              <ImageContainer sx={{ overflow: 'visible', bgcolor: '#f8f9fa' }}>
+                <div style={{ position: "relative", display: "inline-block", transform: `scale(${zoom})`, transformOrigin: 'center center', transition: 'transform 0.2s ease' }}>
                   <img ref={imgRef} src={image} alt="Microscopy" onLoad={drawBoxes} style={{ maxWidth: '100%', height: 'auto', display: 'block' }} />
                   <canvas
                     ref={canvasRef}
@@ -433,7 +549,7 @@ const AnalysisView = ({ image, analysis, patient }) => {
           <Paper
             elevation={0}
             sx={{
-              height: 520, borderRadius: 3, overflow: 'hidden',
+              height: 440, borderRadius: 3, overflow: 'hidden',
               border: '1px solid', borderColor: 'divider',
               display: 'flex', flexDirection: 'column'
             }}
@@ -466,54 +582,201 @@ const AnalysisView = ({ image, analysis, patient }) => {
                 Detected Particles
               </Typography>
 
-              {particles.map((p, i) => (
-                <Paper
-                  key={i}
-                  elevation={0}
-                  sx={{
-                    p: 2, mt: 1.5, borderRadius: 2.5,
-                    border: '1px solid', borderColor: alpha(p.color, 0.15),
-                    bgcolor: alpha(p.color, 0.03),
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                      bgcolor: alpha(p.color, 0.06),
-                      borderColor: alpha(p.color, 0.3),
-                      transform: 'translateX(4px)',
-                    }
-                  }}
-                >
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <Box sx={{
-                        p: 0.7, borderRadius: 1.5,
-                        bgcolor: alpha(p.color, 0.12), color: p.color,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                      }}>
-                        {p.icon}
+              {particles.map((p, i) => {
+                const isDetected = p.count > 0;
+                const subtypeEntries = p.name === 'Crystals'
+                  ? CRYSTAL_TYPES.map(t => [CRYSTAL_DISPLAY_NAMES[t], crystalsData.subtype_summary?.[t] || 0])
+                  : p.name === 'Casts' && castsData.subtype_summary
+                    ? Object.entries(castsData.subtype_summary)
+                    : p.name === 'RBC' && rbcData.subtype_summary
+                      ? Object.entries(rbcData.subtype_summary)
+                      : [];
+
+                return (
+                  <Paper
+                    key={i}
+                    elevation={0}
+                    sx={{
+                      p: 2, mt: 1.5, borderRadius: 2.5,
+                      border: '1px solid',
+                      borderColor: alpha(p.color, 0.35),
+                      borderLeft: isDetected ? `4px solid ${p.color}` : `1px solid ${alpha(p.color, 0.35)}`,
+                      bgcolor: '#fff',
+                      transition: 'all 0.25s ease',
+                      '&:hover': {
+                        bgcolor: '#fafafa',
+                        borderColor: '#d0d0d0',
+                        transform: 'translateX(4px)',
+                      }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Box sx={{
+                          p: 0.8, borderRadius: 1.5,
+                          bgcolor: alpha(p.color, 0.12), color: p.color,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                          {p.icon}
+                        </Box>
+                        <Typography variant="body2" fontWeight={700} sx={{ fontSize: '0.95rem' }}>{p.name}</Typography>
                       </Box>
-                      <Box>
-                        <Typography variant="body2" fontWeight={700}>{p.name}</Typography>
-                        <Typography variant="caption" color="text.secondary">{p.types}</Typography>
+
+                      {/* Prominent Count Badge */}
+                      <Box sx={{
+                        display: 'flex', alignItems: 'center', gap: 1,
+                      }}>
+                        {isDetected ? (
+                          <Box sx={{
+                            display: 'flex', alignItems: 'center', gap: 0.8,
+                            bgcolor: p.color,
+                            color: '#fff',
+                            px: 1.8, py: 0.6,
+                            borderRadius: 2,
+                            boxShadow: `0 3px 12px ${alpha(p.color, 0.4)}`,
+                            minWidth: 70,
+                            justifyContent: 'center',
+                          }}>
+                            <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 }}>
+                              {p.count}
+                            </Typography>
+                            <Typography sx={{ fontWeight: 600, fontSize: '0.65rem', opacity: 0.9, lineHeight: 1, textTransform: 'uppercase' }}>
+                              found
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <Chip
+                            label="Clear"
+                            size="small"
+                            sx={{
+                              bgcolor: alpha('#66bb6a', 0.1),
+                              color: '#66bb6a',
+                              fontWeight: 700, fontSize: '0.72rem', height: 26,
+                              border: '1px solid', borderColor: alpha('#66bb6a', 0.25),
+                            }}
+                          />
+                        )}
                       </Box>
                     </Box>
-                    <Chip
-                      label={p.count > 0 ? `${p.count} found` : 'Clear'}
-                      size="small"
-                      sx={{
-                        bgcolor: p.count > 0 ? alpha(p.color, 0.1) : alpha('#66bb6a', 0.1),
-                        color: p.count > 0 ? p.color : '#66bb6a',
-                        fontWeight: 700, fontSize: '0.7rem', height: 22,
-                        border: '1px solid', borderColor: p.count > 0 ? alpha(p.color, 0.2) : alpha('#66bb6a', 0.2),
-                      }}
-                    />
-                  </Box>
-                </Paper>
-              ))}
+
+                    {/* Subtype breakdown tags */}
+                    {isDetected && subtypeEntries.length > 0 && (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.7, mt: 1.2, pl: 4.5 }}>
+                        {subtypeEntries.map(([subtype, count]) => (
+                          <Chip
+                            key={subtype}
+                            label={`${subtype.replace(/_/g, ' ')}: ${count}`}
+                            size="small"
+                            sx={{
+                              height: 22,
+                              fontSize: '0.68rem',
+                              fontWeight: 600,
+                              bgcolor: count > 0 ? alpha(p.color, 0.1) : alpha('#9e9e9e', 0.08),
+                              color: count > 0 ? p.color : 'text.secondary',
+                              border: '1px solid',
+                              borderColor: count > 0 ? alpha(p.color, 0.2) : alpha('#9e9e9e', 0.15),
+                              textTransform: 'capitalize',
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    )}
+
+                    {/* WBC / non-subtype detail text */}
+                    {isDetected && subtypeEntries.length === 0 && p.types && p.types !== 'Not detected' && (
+                      <Typography variant="caption" sx={{ display: 'block', mt: 0.8, pl: 4.5, color: p.color, fontWeight: 600 }}>
+                        {p.types}
+                      </Typography>
+                    )}
+
+                    {/* Not detected message */}
+                    {!isDetected && p.types === 'Not detected' && (
+                      <Typography variant="caption" sx={{ display: 'block', mt: 0.5, pl: 4.5, color: 'text.disabled', fontStyle: 'italic' }}>
+                        Not detected in sample
+                      </Typography>
+                    )}
+                  </Paper>
+                );
+              })}
             </Box>
 
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Chemical Analysis Section */}
+      {chemicalParameters && (
+        <Paper
+          elevation={0}
+          sx={{
+            mt: 2, borderRadius: 3, overflow: 'hidden',
+            border: '1px solid', borderColor: 'divider',
+          }}
+        >
+          <Box sx={{
+            px: 3, py: 2,
+            background: 'linear-gradient(135deg, #0f172a, #1e3a5f)',
+            color: 'white'
+          }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box>
+                <Typography variant="subtitle1" fontWeight={700}>Chemical Analysis Report</Typography>
+                <Typography variant="caption" sx={{ opacity: 0.7 }}>Urine full report — manual entry by MLT</Typography>
+              </Box>
+              <Chip
+                label="Manual Entry"
+                size="small"
+                sx={{
+                  bgcolor: alpha('#ff9800', 0.2), color: '#ffcc80', fontWeight: 700, fontSize: '0.7rem',
+                  border: '1px solid', borderColor: alpha('#ff9800', 0.3)
+                }}
+              />
+            </Box>
+          </Box>
+          <Box sx={{ p: 0 }}>
+            <Table size="small">
+              <TableBody>
+                {[
+                  { label: 'Colour', value: chemicalParameters.colour },
+                  { label: 'Appearance', value: chemicalParameters.appearance },
+                  { label: 'S.G. (Refractometer)', value: chemicalParameters.specificGravity },
+                  { label: 'pH', value: chemicalParameters.pH },
+                  { label: 'Protein', value: chemicalParameters.protein },
+                  { label: 'Glucose', value: chemicalParameters.glucose },
+                  { label: 'Ketone Bodies', value: chemicalParameters.ketoneBodies },
+                  { label: 'Bilirubin', value: chemicalParameters.bilirubin },
+                  { label: 'Nitrite', value: chemicalParameters.nitrite },
+                  { label: 'Urobilinogen', value: chemicalParameters.urobilinogen },
+                  { label: 'Blood (Occult)', value: chemicalParameters.blood },
+                ].map((row, i) => {
+                  const isAbnormal = (() => {
+                    const v = row.value;
+                    if (row.label === 'Protein' || row.label === 'Glucose' || row.label === 'Ketone Bodies' || row.label === 'Bilirubin' || row.label.includes('Blood')) return v !== 'Nil';
+                    if (row.label === 'Nitrite') return v === 'Positive';
+                    if (row.label === 'Urobilinogen') return v === 'Elevated';
+                    if (row.label === 'pH') return v && (parseFloat(v) < 5.0 || parseFloat(v) > 7.5);
+                    if (row.label.includes('S.G.')) return v && (parseFloat(v) < 1.005 || parseFloat(v) > 1.030);
+                    if (row.label === 'Colour') return !['Pale Yellow', 'Yellow'].includes(v);
+                    if (row.label === 'Appearance') return v !== 'Clear';
+                    return false;
+                  })();
+                  return (
+                    <TableRow key={i} sx={{ '&:last-child td': { borderBottom: 0 }, bgcolor: isAbnormal ? alpha('#ef5350', 0.04) : 'transparent' }}>
+                      <TableCell sx={{ pl: 3, py: 1.2, width: '45%', fontWeight: 600, fontSize: '0.82rem', color: 'text.secondary' }}>{row.label}</TableCell>
+                      <TableCell sx={{ py: 1.2, fontWeight: 700, fontSize: '0.85rem', color: isAbnormal ? '#ef5350' : 'text.primary' }}>
+                        {row.value || '—'}
+                        {isAbnormal && (
+                          <Chip label="Abnormal" size="small" sx={{ ml: 1, height: 18, fontSize: '0.6rem', fontWeight: 700, bgcolor: alpha('#ef5350', 0.1), color: '#ef5350' }} />
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </Box>
+        </Paper>
+      )}
 
       {/* Success Snackbar */}
       <Snackbar

@@ -1,5 +1,6 @@
 import Report from '../models/Report.js';
 import Patient from '../models/Patient.js';
+import ClinicalVerification from '../models/ClinicalVerification.js';
 import fs from 'fs';
 import axios from 'axios';
 import FormData from 'form-data';
@@ -9,8 +10,14 @@ import FormData from 'form-data';
 // @access  Private
 export const getReports = async (req, res, next) => {
     try {
-        const reports = await Report.find()
-            .populate('patientId', 'name patientId')
+        let query = {};
+        if (req.query.patientId) {
+            query.patientId = req.query.patientId;
+        }
+        
+        const reports = await Report.find(query)
+            .sort({ createdAt: -1 })
+            .populate('patientId', 'name patientId age status riskAssessment dateAssigned')
             .populate('uploadedBy', 'name');
 
         res.status(200).json({ success: true, count: reports.length, data: reports });
@@ -19,7 +26,7 @@ export const getReports = async (req, res, next) => {
     }
 };
 
-// @desc    Upload an image & Create report analyzing findings
+// @desc    Upload an image & get analysis
 // @route   POST /api/reports/upload
 // @access  Private (MLT)
 export const uploadImage = async (req, res, next) => {
@@ -53,12 +60,45 @@ export const uploadImage = async (req, res, next) => {
 
         const utiDetectedFromImage = (wbcCount >= 5 || bacteriaDetected || yeastCount >= 3);
 
-        // Update patient status to Ready for Review
-        await Patient.findByIdAndUpdate(patientId, { status: 'Ready for Review' });
+        res.status(200).json({ 
+            success: true, 
+            data: {
+                imageUrl: `/uploads/${req.file.filename}`,
+                analysis: mlResponse.data
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Submit final report and save to DB
+// @route   POST /api/reports/submit
+// @access  Private (MLT)
+export const submitReport = async (req, res, next) => {
+    try {
+        const { patientId, imageUrl, analysis, riskLevel, chemicalParameters } = req.body;
+
+        if (!patientId || (!imageUrl && !analysis && !chemicalParameters)) {
+            return res.status(400).json({ success: false, error: 'Missing required report data' });
+        }
+
+        let mappedRisk = 'Pending';
+        if (riskLevel === 'High Risk') mappedRisk = 'High';
+        else if (riskLevel === 'Moderate Risk') mappedRisk = 'Moderate';
+        else if (riskLevel === 'Low Risk') mappedRisk = 'Low';
+
+        await Patient.findByIdAndUpdate(patientId, { 
+            status: 'Ready for Review',
+            riskAssessment: mappedRisk
+        });
 
         const report = await Report.create({
             patientId,
             uploadedBy: req.user.id,
+            imageUrl,
+            analysis,
+            chemicalParameters,
             imageUrl: `/uploads/${req.file.filename}`,
             analysis: mlResponse.data,
             utiDetectedFromImage: utiDetectedFromImage,
@@ -96,31 +136,39 @@ export const getReport = async (req, res, next) => {
 // @access  Private (CLINICIAN)
 export const verifyReport = async (req, res, next) => {
     try {
-        const { comments, status } = req.body;
+        const { agreement, notes, prescription } = req.body;
 
-        let report = await Report.findById(req.params.id);
+        const report = await Report.findById(req.params.id);
 
         if (!report) {
             return res.status(404).json({ success: false, error: 'Report not found' });
         }
 
-        report = await Report.findByIdAndUpdate(req.params.id, {
-            status: status || 'Verified',
-            comments,
+        // 1. Create a separate ClinicalVerification document
+        const verification = await ClinicalVerification.create({
+            reportId: report._id,
+            patientId: report.patientId,
             clinicianId: req.user.id,
+            agreement: agreement || 'agree',
+            clinicalNotes: notes || '',
+            prescription: prescription || '',
             verifiedAt: Date.now()
-        }, {
-            new: true,
-            runValidators: true
         });
 
-        // Update the associated patient based on report analysis
+        // 2. Update the Report status
+        await Report.findByIdAndUpdate(req.params.id, {
+            status: 'Verified',
+            clinicianId: req.user.id,
+            verifiedAt: Date.now(),
+            comments: notes || ''
+        });
+
+        // 3. Update the Patient status to Completed
         await Patient.findByIdAndUpdate(report.patientId, {
-            status: 'Completed',
-            riskAssessment: report.riskScore > 75 ? 'High' : 'Normal'
+            status: 'Completed'
         });
 
-        res.status(200).json({ success: true, data: report });
+        res.status(200).json({ success: true, data: verification });
     } catch (error) {
         next(error);
     }

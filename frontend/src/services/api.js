@@ -50,6 +50,28 @@ export const api = {
         return data.data; // return created patient
     },
 
+    updatePatient: async (patientId, patientData) => {
+        const response = await fetch(`${BACKEND_URL}/patients/${patientId}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(patientData)
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to update patient');
+        // Return updated patient from API
+        return data.data;
+    },
+
+    deletePatient: async (patientId) => {
+        const response = await fetch(`${BACKEND_URL}/patients/${patientId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to delete patient');
+        return data;
+    },
+
     uploadImage: async (file, patientId) => {
         const formData = new FormData();
         formData.append('image', file);
@@ -71,6 +93,26 @@ export const api = {
         return data.data;
     },
 
+    submitReport: async (reportData) => {
+        const response = await fetch(`${BACKEND_URL}/reports/submit`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(reportData)
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to submit report');
+        return data.data;
+    },
+
+    getReportsByPatient: async (patientId) => {
+        const response = await fetch(`${BACKEND_URL}/reports?patientId=${patientId}`, {
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to fetch reports');
+        return data.data;
+    },
+
     getReport: async (reportId) => {
         const response = await fetch(`${BACKEND_URL}/reports/${reportId}`, {
             headers: getAuthHeaders()
@@ -89,6 +131,26 @@ export const api = {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Failed to verify report');
         return data.data;
+    },
+
+    getAllReports: async () => {
+        const response = await fetch(`${BACKEND_URL}/reports`, {
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to fetch reports');
+        return data.data;
+    },
+
+    sendAccessLink: async (patientId) => {
+        const response = await fetch(`${BACKEND_URL}/patient-access/send-link`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ patientId })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to send access link');
+        return data;
     }
 };
 

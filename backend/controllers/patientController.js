@@ -60,3 +60,47 @@ export const createPatient = async (req, res, next) => {
         next(error);
     }
 };
+
+// @desc    Delete patient
+// @route   DELETE /api/patients/:id
+// @access  Private (MLT)
+export const deletePatient = async (req, res, next) => {
+    try {
+        const patient = await Patient.findByIdAndDelete(req.params.id);
+
+        if (!patient) {
+            return res.status(404).json({ success: false, error: 'Patient not found' });
+        }
+
+        res.status(200).json({ success: true, data: {} });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Update patient
+// @route   PUT /api/patients/:id
+// @access  Private (MLT, CLINICIAN)
+export const updatePatient = async (req, res, next) => {
+    try {
+        let patient = await Patient.findById(req.params.id);
+
+        if (!patient) {
+            return res.status(404).json({ success: false, error: 'Patient not found' });
+        }
+
+        // Only allow updating certain unprivileged fields
+        const { name, age, gender, email, mobile, notes } = req.body;
+        
+        patient = await Patient.findByIdAndUpdate(req.params.id, {
+            name, age, gender, email, mobile, notes
+        }, {
+            new: true,
+            runValidators: true
+        });
+
+        res.status(200).json({ success: true, data: patient });
+    } catch (error) {
+        next(error);
+    }
+};

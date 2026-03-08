@@ -16,6 +16,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import ImageUpload from './ImageUpload';
 import AnalysisView from './AnalysisView';
+import ChemicalParametersForm from './ChemicalParametersForm';
 import { api } from '../../services/api';
 import microscopyImage from '../../assets/c5.jpg';
 
@@ -41,7 +42,7 @@ const StepIconRoot = styled('div')(({ ownerState }) => ({
 
 function CustomStepIcon(props) {
   const { active, completed, icon } = props;
-  const icons = { 1: <PersonSearchIcon sx={{ fontSize: 18 }} />, 2: <PhotoCameraBackIcon sx={{ fontSize: 18 }} />, 3: <ScienceIcon sx={{ fontSize: 18 }} /> };
+  const icons = { 1: <PersonSearchIcon sx={{ fontSize: 18 }} />, 2: <PhotoCameraBackIcon sx={{ fontSize: 18 }} />, 3: <ScienceIcon sx={{ fontSize: 18 }} />, 4: <ScienceIcon sx={{ fontSize: 18 }} /> };
   return (
     <StepIconRoot ownerState={{ active, completed }}>
       {completed ? <CheckCircleIcon sx={{ fontSize: 20 }} /> : icons[String(icon)]}
@@ -56,6 +57,7 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [uploadedImage, setUploadedImage] = useState(null);
+  const [chemicalParameters, setChemicalParameters] = useState(null);
 
   const videoRef = useRef(null);
   const [stream, setStream] = useState(null);
@@ -79,8 +81,32 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
     if (preSelectedPatient) {
       setSelectedPatient(preSelectedPatient);
       if (preSelectedPatient.status === 'Ready for Review' || preSelectedPatient.status === 'Completed') {
-        setUploadedImage(microscopyImage);
-        setAnalysisResult({ wbc: 5, rbc: 2, crystals: 'Calcium Oxalate', risk: 45 });
+        // Fetch real report from database
+        const fetchReport = async () => {
+          try {
+            const reports = await api.getReportsByPatient(preSelectedPatient._id);
+            if (reports && reports.length > 0) {
+              const latestReport = reports[0]; // Already sorted by createdAt desc
+              const fullImageUrl = latestReport.imageUrl ? `http://localhost:5000${latestReport.imageUrl}` : null;
+              setUploadedImage(fullImageUrl);
+              setAnalysisResult(latestReport.analysis);
+              if (latestReport.chemicalParameters) {
+                setChemicalParameters(latestReport.chemicalParameters);
+              }
+            } else {
+              // No report found, reset
+              setAnalysisResult(null);
+              setUploadedImage(null);
+              setChemicalParameters(null);
+            }
+          } catch (error) {
+            console.error('Failed to fetch patient report:', error);
+            setAnalysisResult(null);
+            setUploadedImage(null);
+            setChemicalParameters(null);
+          }
+        };
+        fetchReport();
       } else {
         setAnalysisResult(null);
         setUploadedImage(null);
@@ -152,21 +178,30 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
 
   const getOptionLabel = (option) => option ? `${option.name} (ID: ${option.patientId})` : '';
 
-  const activeStep = analysisResult ? 2 : selectedPatient ? 1 : 0;
+  const [showChemForm, setShowChemForm] = useState(false);
 
-  // Render Result View
+  const activeStep = chemicalParameters ? 3 : analysisResult ? 2 : selectedPatient ? 1 : 0;
+
+  // Render Chemical Parameters Form (optional step, triggered from AnalysisView)
+  if (analysisResult && uploadedImage && showChemForm && !chemicalParameters) {
+    return (
+      <Box sx={{ animation: 'fadeIn 0.4s ease-out' }}>
+        <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+        <ChemicalParametersForm
+          patient={selectedPatient}
+          onSubmit={(params) => { setChemicalParameters(params); setShowChemForm(false); }}
+          onBack={() => setShowChemForm(false)}
+        />
+      </Box>
+    );
+  }
+
+  // Render Report View (after AI analysis, with or without chemical params)
   if (analysisResult && uploadedImage) {
     return (
       <Box sx={{ animation: 'fadeIn 0.4s ease-out' }}>
         <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
-        <Button
-          onClick={() => { setAnalysisResult(null); setUploadedImage(null); setInputMethod(0); }}
-          startIcon={<ArrowBackIcon />}
-          sx={{ mb: 2, textTransform: 'none', fontWeight: 600, color: '#00bcd4' }}
-        >
-          ← New Analysis
-        </Button>
-        <AnalysisView image={uploadedImage} analysis={analysisResult} patient={selectedPatient} />
+        <AnalysisView image={uploadedImage} analysis={analysisResult} chemicalParameters={chemicalParameters} patient={selectedPatient} onNewAnalysis={() => { setAnalysisResult(null); setUploadedImage(null); setChemicalParameters(null); setShowChemForm(false); setInputMethod(0); setSelectedPatient(null); }} onReAnalysis={() => { setAnalysisResult(null); setUploadedImage(null); setChemicalParameters(null); setShowChemForm(false); setInputMethod(0); }} onAddChemicalParams={() => setShowChemForm(true)} />
       </Box>
     );
   }
@@ -193,7 +228,7 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
         <Stepper activeStep={activeStep} alternativeLabel
           connector={<StepConnector sx={{ '& .MuiStepConnector-line': { borderColor: alpha('#00bcd4', 0.2), borderTopWidth: 2 } }} />}
         >
-          {['Select Patient', 'Acquire Image', 'AI Analysis'].map((label, idx) => (
+          {['Select Patient', 'Acquire Image', 'AI Analysis', 'Chemical Params'].map((label, idx) => (
             <Step key={label} completed={activeStep > idx}>
               <StepLabel StepIconComponent={CustomStepIcon}>
                 <Typography variant="caption" fontWeight={activeStep >= idx ? 700 : 500} color={activeStep >= idx ? 'text.primary' : 'text.secondary'}>
@@ -225,10 +260,32 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
 
             <Box sx={{ p: 3 }}>
               <Autocomplete
-                options={patients}
+                options={patients.filter(p => p.status === 'Awaiting Analysis')}
                 getOptionLabel={getOptionLabel}
                 value={selectedPatient}
                 onChange={(event, newValue) => setSelectedPatient(newValue)}
+                renderOption={(props, option) => {
+                  const { key, ...rest } = props;
+                  return (
+                    <Box component="li" key={key} {...rest} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1 }}>
+                      <Avatar sx={{ width: 30, height: 30, bgcolor: alpha('#00bcd4', 0.1), color: '#00bcd4', fontSize: '0.75rem', fontWeight: 700 }}>
+                        {option.name?.charAt(0)}
+                      </Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="body2" fontWeight={600}>{option.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">ID: {option.patientId}</Typography>
+                      </Box>
+                      <Chip
+                        label={option.status}
+                        size="small"
+                        sx={{
+                          height: 20, fontSize: '0.6rem', fontWeight: 600,
+                          bgcolor: alpha('#ff9800', 0.1), color: '#e65100',
+                        }}
+                      />
+                    </Box>
+                  );
+                }}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -238,6 +295,7 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                   />
                 )}
+                noOptionsText="No patients awaiting analysis"
                 sx={{ mb: 3 }}
               />
 
