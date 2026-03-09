@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import Patient from '../models/Patient.js';
 import Report from '../models/Report.js';
+import ClinicalVerification from '../models/ClinicalVerification.js';
 import { sendAccessEmail } from '../utils/emailService.js';
 import { generateOTP, sendOTP } from '../utils/otpService.js';
 
@@ -36,10 +37,24 @@ export const getMyReport = async (req, res, next) => {
             return res.status(404).json({ success: false, error: 'Patient not found' });
         }
 
-        // Get the latest report for this patient
-        const reports = await Report.find({ patientId: patient._id })
+        // Get latest reports for this patient
+        const rawReports = await Report.find({ patientId: patient._id })
             .sort({ createdAt: -1 })
             .limit(5);
+
+        // Attach latest clinician verification (if available) for each report
+        const reports = await Promise.all(
+            rawReports.map(async (report) => {
+                const verification = await ClinicalVerification.findOne({ reportId: report._id })
+                    .sort({ createdAt: -1 })
+                    .lean();
+
+                return {
+                    ...report.toObject(),
+                    verification: verification || null
+                };
+            })
+        );
 
         res.status(200).json({
             success: true,

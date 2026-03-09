@@ -115,6 +115,30 @@ const PatientPortal = () => {
 
   const reportDate = report ? new Date(report.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
   const imageUrl = report?.imageUrl ? `http://localhost:5000${report.imageUrl}` : '';
+  const verification = report?.verification || null;
+  const doctorPrescription = verification?.prescription || '';
+  const doctorNotes = verification?.clinicalNotes || report?.comments || '';
+  const verifiedDate = verification?.verifiedAt
+    ? new Date(verification.verifiedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
+  const recommendationItems = (() => {
+    const sourceText = `${doctorPrescription || ''}. ${doctorNotes || ''}`
+      .replace(/\s+/g, ' ')
+      .trim();
+    const parts = sourceText
+      .split(/[.;\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 4);
+
+    if (parts.length > 0) return parts;
+
+    return [
+      'Increase daily water intake to 2.5L',
+      'Reduce sodium intake (salt)',
+      'Limit oxalate-rich foods',
+    ];
+  })();
 
   const sediments = [
     { label: 'WBC', value: `${wbcCount}`, unit: '/hpf', color: '#00bcd4', icon: <ShieldIcon /> },
@@ -594,25 +618,34 @@ const PatientPortal = () => {
                       <Grid size={{ xs: 12, md: 6 }}>
                         <Paper elevation={0} sx={{ p: 2.5, borderRadius: 2.5, height: '100%', bgcolor: alpha('#2196f3', 0.04), border: '1px solid', borderColor: alpha('#2196f3', 0.12) }}>
                           <Typography variant="caption" fontWeight={700} color="primary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>Prescription & Notes</Typography>
-                          <Typography variant="body1" sx={{ mt: 1.5, fontWeight: 500, lineHeight: 1.7 }}>Drink plenty of water. Follow up in 3 months.</Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ mt: 2, fontStyle: 'italic' }}>- Dr. Smith (Urologist)</Typography>
+                          <Typography variant="body1" sx={{ mt: 1.5, fontWeight: 500, lineHeight: 1.7 }}>
+                            {doctorPrescription || 'No prescription added yet.'}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1.4, lineHeight: 1.7 }}>
+                            {doctorNotes || 'No clinician notes available.'}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 2, fontStyle: 'italic' }}>
+                            {verifiedDate ? `Clinician verified on ${verifiedDate}` : 'Awaiting clinician verification'}
+                          </Typography>
                         </Paper>
                       </Grid>
                       <Grid size={{ xs: 12, md: 6 }}>
-                        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>Lifestyle Adjustments</Typography>
+                        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5, mb: 1.5, display: 'block' }}>Recommendations</Typography>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                          {[
-                            { icon: <WaterDropIcon />, text: 'Increase daily water intake to 2.5L', color: '#00bcd4' },
-                            { icon: <RestaurantIcon />, text: 'Reduce sodium intake (salt)', color: '#ff9100' },
-                            { icon: <FitnessCenterIcon />, text: 'Limit oxalate-rich foods', color: '#7c4dff' },
-                          ].map((item, i) => (
+                          {recommendationItems.map((text, i) => {
+                            const item = i % 3 === 0
+                              ? { icon: <WaterDropIcon />, color: '#00bcd4' }
+                              : i % 3 === 1
+                                ? { icon: <RestaurantIcon />, color: '#ff9100' }
+                                : { icon: <FitnessCenterIcon />, color: '#7c4dff' };
+                            return (
                             <Paper key={i} elevation={0} sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1.5, borderRadius: 2.5, border: '1px solid', borderColor: 'divider', transition: 'all 0.15s', '&:hover': { borderColor: alpha(item.color, 0.3), bgcolor: alpha(item.color, 0.02) } }}>
                               <Box sx={{ p: 0.8, borderRadius: 2, bgcolor: alpha(item.color, 0.08), color: item.color, display: 'flex' }}>
                                 {React.cloneElement(item.icon, { sx: { fontSize: 18 } })}
                               </Box>
-                              <Typography variant="body2" fontWeight={500}>{item.text}</Typography>
+                              <Typography variant="body2" fontWeight={500}>{text}</Typography>
                             </Paper>
-                          ))}
+                          )})}
                         </Box>
                       </Grid>
                     </Grid>
