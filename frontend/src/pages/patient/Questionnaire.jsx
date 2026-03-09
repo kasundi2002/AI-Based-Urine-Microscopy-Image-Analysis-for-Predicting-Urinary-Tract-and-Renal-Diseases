@@ -97,18 +97,43 @@ const SECTION_TITLES = [
   'Hydration, Diet, Lifestyle',
 ];
 
-const emptyAnswers = () => {
+const emptyAnswers = (patientDetails) => {
   const answers = {};
   for (let i = 1; i <= 33; i += 1) answers[`q${i}`] = '';
+  if (patientDetails) {
+    if (patientDetails.age) answers.q1 = patientDetails.age;
+    if (patientDetails.gender) {
+      const g = String(patientDetails.gender).toLowerCase();
+      if (g === 'male' || g === 'm') answers.q2 = 'Male';
+      else if (g === 'female' || g === 'f') answers.q2 = 'Female';
+      else answers.q2 = patientDetails.gender;
+    }
+  }
   return answers;
 };
 
-const Questionnaire = ({ onComplete }) => {
+const Questionnaire = ({ onComplete, patientDetails }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
-  const [answers, setAnswers] = useState(emptyAnswers);
+  const [answers, setAnswers] = useState(() => emptyAnswers(patientDetails));
+
+  useEffect(() => {
+    if (patientDetails) {
+      setAnswers((prev) => {
+        const changes = {};
+        if (patientDetails.age && !prev.q1) changes.q1 = patientDetails.age;
+        if (patientDetails.gender && !prev.q2) {
+          const g = String(patientDetails.gender).toLowerCase();
+          if (g === 'male' || g === 'm') changes.q2 = 'Male';
+          else if (g === 'female' || g === 'f') changes.q2 = 'Female';
+          else changes.q2 = patientDetails.gender;
+        }
+        return Object.keys(changes).length > 0 ? { ...prev, ...changes } : prev;
+      });
+    }
+  }, [patientDetails]);
 
   const questionsBySection = useMemo(() => {
     return QUESTIONS.reduce((acc, question) => {
@@ -197,6 +222,9 @@ const Questionnaire = ({ onComplete }) => {
 
   const renderQuestion = (q) => {
     const value = answers[`q${q.id}`];
+    
+    // Disable if automatically populated from patient details
+    const isDisabled = Boolean((q.id === 1 && patientDetails?.age) || (q.id === 2 && patientDetails?.gender));
 
     if (q.type === 'number') {
       return (
@@ -208,12 +236,13 @@ const Questionnaire = ({ onComplete }) => {
           onChange={(e) => handleAnswerChange(q.id, e.target.value)}
           inputProps={{ min: 1, max: 120 }}
           sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+          disabled={isDisabled}
         />
       );
     }
 
     return (
-      <FormControl>
+      <FormControl disabled={isDisabled}>
         <FormLabel sx={{ color: 'text.secondary', mb: 1 }}>Q{q.id}</FormLabel>
         <RadioGroup
           value={value}
