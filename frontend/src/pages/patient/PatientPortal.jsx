@@ -87,14 +87,23 @@ const PatientPortal = () => {
 
   // Extract data from report
   const analysis = report?.analysis || {};
-  const detections = analysis.detections || [];
-  const countByClass = {};
-  detections.forEach(d => {
-    const cls = d.class_name || d.class || 'Unknown';
-    countByClass[cls] = (countByClass[cls] || 0) + 1;
-  });
+  const particlesData = analysis.particles || {};
+  const getCount = (k) => particlesData[k]?.total_count || 0;
 
-  const riskLevel = analysis.risk_level || 'Low';
+  const wbcCount = getCount('wbc');
+  const rbcCount = getCount('rbc');
+  const crystalCount = getCount('crystal') || getCount('crystals');
+  const bacteriaCount = getCount('bacteria');
+  const castCount = getCount('cast');
+  const yeastCount = getCount('yeast');
+  const totalDetections = wbcCount + rbcCount + crystalCount + bacteriaCount + castCount + yeastCount;
+
+  const diagnoses = analysis.diagnosis?.diagnoses || [];
+  const isNormal = diagnoses.some(d => d.name === 'Normal Urine Sediment');
+  const hasHigh = diagnoses.some(d => d.probability === 'High' && d.name !== 'Normal Urine Sediment');
+  const hasMod = diagnoses.some(d => d.probability === 'Moderate' && d.name !== 'Normal Urine Sediment');
+  const riskLevel = hasHigh ? 'High' : (hasMod ? 'Moderate' : 'Low');
+
   const baseRiskScore = riskLevel === 'High' ? 75 : riskLevel === 'Moderate' ? 45 : 20;
   const riskScore = riskPrediction?.riskScore || baseRiskScore;
   const isHighRisk = riskScore > 50;
@@ -110,10 +119,10 @@ const PatientPortal = () => {
   const reportDate = report ? new Date(report.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
 
   const sediments = [
-    { label: 'WBC', value: `${countByClass['WBC'] || countByClass['wbc'] || 0}`, unit: '/hpf', color: '#00bcd4', icon: <ShieldIcon /> },
-    { label: 'RBC', value: `${countByClass['RBC'] || countByClass['rbc'] || 0}`, unit: '/hpf', color: '#ef5350', icon: <BloodtypeIcon /> },
-    { label: 'Crystals', value: countByClass['Crystal'] || countByClass['Crystals'] || countByClass['crystal'] ? `${countByClass['Crystal'] || countByClass['Crystals'] || countByClass['crystal']}` : 'None', unit: '', color: '#ff9100', icon: <DiamondIcon /> },
-    { label: 'Bacteria', value: countByClass['Bacteria'] || countByClass['bacteria'] ? `${countByClass['Bacteria'] || countByClass['bacteria']}` : 'None', unit: '', color: '#66bb6a', icon: <BugReportIcon /> },
+    { label: 'WBC', value: `${wbcCount}`, unit: '/hpf', color: '#00bcd4', icon: <ShieldIcon /> },
+    { label: 'RBC', value: `${rbcCount}`, unit: '/hpf', color: '#ef5350', icon: <BloodtypeIcon /> },
+    { label: 'Crystals', value: crystalCount > 0 ? `${crystalCount}` : 'None', unit: '', color: '#ff9100', icon: <DiamondIcon /> },
+    { label: 'Bacteria', value: bacteriaCount > 0 ? `${bacteriaCount}` : 'None', unit: '', color: '#66bb6a', icon: <BugReportIcon /> },
   ];
 
   // Build PDF-compatible report object
@@ -143,8 +152,11 @@ const PatientPortal = () => {
     if (q.bloodInUrine === 'yes') score += 15;
     if (q.burning === 'yes') score += 10;
     if (q.medication === 'yes') score += 3;
-    if (r?.analysis?.risk_level === 'High') score += 15;
-    else if (r?.analysis?.risk_level === 'Moderate') score += 8;
+    const diags = r?.analysis?.diagnosis?.diagnoses || [];
+    const rHasHigh = diags.some(d => d.probability === 'High' && d.name !== 'Normal Urine Sediment');
+    const rHasMod = diags.some(d => d.probability === 'Moderate' && d.name !== 'Normal Urine Sediment');
+    if (rHasHigh) score += 15;
+    else if (rHasMod) score += 8;
     if (r?.chemicalParameters) {
       const c = r.chemicalParameters;
       if (c.protein && c.protein !== 'Nil') score += 8;
@@ -155,8 +167,8 @@ const PatientPortal = () => {
     score = Math.min(score, 95);
     let label = score > 60 ? 'High Risk - Immediate Consultation Recommended'
       : score > 40 ? 'Moderate Risk - Follow-up Advised'
-      : score > 25 ? 'Low-Moderate Risk - Monitor Regularly'
-      : 'Low Risk - Healthy Status';
+        : score > 25 ? 'Low-Moderate Risk - Monitor Regularly'
+          : 'Low Risk - Healthy Status';
     return { riskScore: score, riskLabel: label };
   };
 
@@ -373,7 +385,7 @@ const PatientPortal = () => {
                   )}
                   <Box sx={{ px: 3, py: 1.5, borderTop: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="caption" color="text.secondary">Total detections</Typography>
-                    <Chip label={`${detections.length} objects`} size="small" sx={{ fontWeight: 700, fontSize: '0.68rem', height: 20, bgcolor: alpha('#00bcd4', 0.08), color: '#00bcd4' }} />
+                    <Chip label={`${totalDetections} objects`} size="small" sx={{ fontWeight: 700, fontSize: '0.68rem', height: 20, bgcolor: alpha('#00bcd4', 0.08), color: '#00bcd4' }} />
                   </Box>
                 </Paper>
               </Grid>
