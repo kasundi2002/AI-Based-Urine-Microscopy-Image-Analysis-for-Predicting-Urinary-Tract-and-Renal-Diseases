@@ -108,7 +108,7 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
   const drawBoxes = () => {
     const img = imgRef.current;
     const canvas = canvasRef.current;
-    if (!img || !canvas || !analysis) return;
+    if (!img || !canvas || !analysis || !analysis.particles) return;
 
     // Use offsetWidth/Height instead of getBoundingClientRect
     // because getBoundingClientRect is affected by CSS transforms (zoom scale)
@@ -123,7 +123,7 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    Object.entries(analysis).forEach(([particleName, data]) => {
+    Object.entries(analysis.particles).forEach(([particleName, data]) => {
       if (!data || !data.detected) return;
       if (particleName === "yeast") return; // hide yeast boundary boxes on canvas
 
@@ -191,28 +191,34 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
 
   if (!image) return <Typography>No image loaded</Typography>;
 
-  const crystalsData = analysis?.crystals || {};
-  const castsData = analysis?.casts || {};
-  const wbcData = analysis?.wbc || {};
-  const rbcData = analysis?.rbc || {};
-  const yeastData = analysis?.yeast || {};
+  const particlesData = analysis?.particles || {};
+  const crystalsData = particlesData.crystal || particlesData.crystals || {}; // try crystal and crystals
+  const castsData = particlesData.cast || particlesData.casts || {};
+  const wbcData = particlesData.wbc || {};
+  const rbcData = particlesData.rbc || {};
+  const yeastData = particlesData.yeast || {};
+  const bacteriaData = particlesData.bacteria || {};
 
-  const totalObjects = (crystalsData.total_count || 0) + (castsData.total_count || 0) + (wbcData.total_count || 0) + (rbcData.total_count || 0) + (yeastData.total_count || 0);
+  const totalObjects = (crystalsData.total_count || 0) + (castsData.total_count || 0) + (wbcData.total_count || 0) + (rbcData.total_count || 0) + (yeastData.total_count || 0) + (bacteriaData.total_count || 0);
 
   let riskLevel = 'Low Risk';
   let riskColor = '#66bb6a';
-  const cRisk = crystalsData.risk_assessment?.level;
-  const castRisk = castsData.risk_assessment?.level;
-  const wbcRisk = wbcData.risk_assessment?.level;
-  const rbcRisk = rbcData.risk_assessment?.level;
-  const yeastRisk = yeastData.risk_assessment?.level;
 
-  if (cRisk === 'High' || castRisk === 'High Risk' || wbcRisk === 'UTI Positive' || rbcRisk === 'High Dysmorphic Presence' || yeastRisk === 'Possible Yeast Infection') {
+  const diagnoses = analysis?.diagnosis?.diagnoses || [];
+
+  const isNormal = diagnoses.some(d => d.name === 'Normal Urine Sediment');
+  const hasHigh = diagnoses.some(d => d.probability === 'High' && d.name !== 'Normal Urine Sediment');
+  const hasMod = diagnoses.some(d => d.probability === 'Moderate' && d.name !== 'Normal Urine Sediment');
+
+  if (hasHigh) {
     riskLevel = 'High Risk';
     riskColor = '#ef5350';
-  } else if (cRisk === 'Moderate' || castRisk === 'Moderate Risk' || rbcRisk === 'Moderate Dysmorphic Presence' || yeastRisk === 'Low Yeast Presence') {
+  } else if (hasMod) {
     riskLevel = 'Moderate Risk';
     riskColor = '#ff9100';
+  } else if (isNormal) {
+    riskLevel = 'Low Risk';
+    riskColor = '#66bb6a';
   }
 
   // Only these 4 crystal types are detected by the ML model
@@ -248,7 +254,7 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
     {
       name: 'WBC',
       count: wbcData.total_count || 0,
-      types: wbcData.total_count > 0 ? wbcRisk : 'Not detected',
+      types: wbcData.total_count > 0 ? 'Detected' : 'Not detected',
       color: '#9c27b0', // purple
       icon: <ShieldIcon sx={{ fontSize: 18 }} />,
       confidence: wbcData.total_count > 0 ? 94 : 99
@@ -266,22 +272,20 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
     {
       name: 'Yeast',
       count: yeastData.total_count || 0,
-      types: yeastData.total_count > 0 ? yeastRisk : 'Not detected',
+      types: yeastData.total_count > 0 ? 'Detected' : 'Not detected',
       color: '#ff9800',
       icon: <ScienceIcon sx={{ fontSize: 18 }} />,
       confidence: yeastData.total_count > 0 ? 95 : 99
     },
     {
       name: 'Bacteria',
-      count: analysis?.bacteria?.total_count || 0,
-      types: analysis?.bacteria?.total_count > 0 ? analysis.bacteria.risk_assessment.level : 'Not detected',
+      count: bacteriaData.total_count || 0,
+      types: bacteriaData.total_count > 0 ? 'Detected' : 'Not detected',
       color: '#00bcd4', // cyan
       icon: <BugReportIcon sx={{ fontSize: 18 }} />,
-      confidence: analysis?.bacteria?.total_count > 0 ? 98 : 99
+      confidence: bacteriaData.total_count > 0 ? 98 : 99
     },
   ];
-
-  const clinicalSuggestion = crystalsData.risk_assessment?.clinical_suggestion || castsData.risk_assessment?.level || "No significant abnormalities detected in Casts or Crystals.";
 
   const handleSubmitReport = async () => {
     try {
@@ -294,7 +298,7 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
           chemicalParameters: chemicalParameters,
           riskLevel: riskLevel
         });
-        
+
         // Optimistically update the patient reference so it doesn't revert on minimal re-renders
         patient.status = 'Ready for Review';
       }
@@ -704,6 +708,28 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
                   </Paper>
                 );
               })}
+
+              {/* Diagnoses section */}
+              {diagnoses.length > 0 && (
+                <>
+                  <Divider sx={{ my: 3 }} />
+                  <Typography variant="overline" color="text.secondary" fontWeight={700} sx={{ px: 1, letterSpacing: 1.5 }}>
+                    Clinical Diagnosis
+                  </Typography>
+                  <Box sx={{ px: 1, mt: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {diagnoses.map((d, idx) => {
+                      const isNormalClass = d.name === 'Normal Urine Sediment';
+                      const finalColor = isNormalClass ? '#66bb6a' : (d.probability === 'High' ? '#ef5350' : d.probability === 'Moderate' ? '#ff9100' : '#66bb6a');
+                      return (
+                        <Paper key={idx} elevation={0} sx={{ p: 2, borderRadius: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid', borderColor: alpha(finalColor, 0.5), bgcolor: alpha(finalColor, 0.05) }}>
+                          <Typography variant="body2" fontWeight={800} sx={{ color: '#0f172a' }}>{d.name}</Typography>
+                          <Chip label={isNormalClass ? 'Normal' : d.probability} size="small" sx={{ height: 22, fontSize: '0.7rem', fontWeight: 800, bgcolor: finalColor, color: 'white', textTransform: 'uppercase', letterSpacing: 0.5 }} />
+                        </Paper>
+                      );
+                    })}
+                  </Box>
+                </>
+              )}
             </Box>
 
           </Paper>

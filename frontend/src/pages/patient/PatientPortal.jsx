@@ -100,7 +100,6 @@ const PatientPortal = () => {
   const bacteriaCount = getCount(analysis?.bacteria);
   const totalDetections = wbcCount + rbcCount + crystalCount + castCount + yeastCount + bacteriaCount;
 
-  const riskLevel = analysis.risk_level || 'Low';
   const baseRiskScore = riskLevel === 'High' ? 75 : riskLevel === 'Moderate' ? 45 : 20;
   const riskScore = riskPrediction?.riskScore || baseRiskScore;
   const isHighRisk = riskScore > 50;
