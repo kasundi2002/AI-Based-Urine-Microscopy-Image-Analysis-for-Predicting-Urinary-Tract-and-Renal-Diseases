@@ -29,7 +29,7 @@ const reportSchema = new mongoose.Schema({
     },
     utiDetectedFromImage: {
         type: Boolean,
-        default: false // True if particles (WBC/bacteria/yeast) detected in image
+        default: false
     },
     status: {
         type: String,

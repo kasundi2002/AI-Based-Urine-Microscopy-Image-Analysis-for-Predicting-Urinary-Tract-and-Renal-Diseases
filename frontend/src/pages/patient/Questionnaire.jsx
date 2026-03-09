@@ -53,7 +53,7 @@ const CustomStepIcon = ({ active, completed, icon }) => {
   );
 };
 
-const Questionnaire = ({ reportId, onComplete }) => {
+const Questionnaire = ({ onComplete, patientDetails, reportId }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [currentPhase, setCurrentPhase] = useState(0);
@@ -91,70 +91,88 @@ const Questionnaire = ({ reportId, onComplete }) => {
 
   // AI loading animation phases & form submission
   useEffect(() => {
-    if (!submitting) return;
-    
-    const submitForm = async () => {
+    if (answers.q2 !== 'Female' && answers.q3 !== 'No') {
+      setAnswers((prev) => ({ ...prev, q3: 'No' }));
+    }
+  }, [answers.q2, answers.q3]);
+
+  useEffect(() => {
+    if (!submitting) return undefined;
+
+    let cancelled = false;
+    setProgress(0);
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        const next = prev + 2;
+        return next > 100 ? 100 : next;
+      });
+    }, 70);
+
+    const submitAsync = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+
       try {
         if (reportId) {
-          // Call backend API to submit questionnaire
-          const response = await fetch(`http://localhost:5000/api/reports/${reportId}/submit-questionnaire`, {
+          const token = localStorage.getItem('patientToken') || localStorage.getItem('token');
+          await fetch(`http://localhost:5000/api/reports/${reportId}/submit-questionnaire`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(formData),
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(answers),
           });
-          
-          if (!response.ok) {
-            const errData = await response.json();
-            setError(errData.error || 'Failed to submit questionnaire');
-            setSubmitting(false);
-            return;
-          }
-          
-          const data = await response.json();
-          console.log('Questionnaire submitted:', data);
         }
       } catch (err) {
-        console.error('Submission error:', err);
-        setError('Network error while submitting questionnaire');
-        setSubmitting(false);
-        return;
+        console.error('Questionnaire backend submission failed:', err);
       }
-      
-      // Complete submission after processing
-      setTimeout(() => {
-        onComplete(formData);
-      }, 5200);
-    };
-    
-    const phaseInterval = setInterval(() => {
-      setCurrentPhase(prev => {
-        if (prev >= processingPhases.length - 1) { clearInterval(phaseInterval); return prev; }
-        return prev + 1;
-      });
-    }, 1200);
-    
-    const progressInterval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) { clearInterval(progressInterval); return 100; }
-        return prev + 2;
-      });
-    }, 100);
-    
-    // Call the async submission
-    submitForm();
-    
-    const completeTimer = setTimeout(() => { 
-      if (!error) {
-        onComplete(formData); 
+
+      if (!cancelled) {
+        clearInterval(interval);
+        setProgress(100);
+        onComplete(answers);
       }
-    }, 5200);
-    
-    return () => { 
-      clearInterval(phaseInterval); 
-      clearInterval(progressInterval); 
-      clearTimeout(completeTimer); 
     };
-  }, [submitting, reportId]);
+
+    submitAsync();
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [submitting, onComplete, answers, reportId]);
+
+  const visibleQuestions = (sectionIndex) => {
+    return (questionsBySection[sectionIndex] || []).filter((q) => {
+      if (!q.condition) return true;
+      return q.condition(answers);
+    });
+  };
+
+  const validateStep = () => {
+    const missing = visibleQuestions(activeStep).filter((q) => {
+      const key = `q${q.id}`;
+      const value = answers[key];
+      if (q.type === 'number') return value === '' || value === null;
+      return !value;
+    });
+
+    if (missing.length > 0) {
+      setError(`Please answer all questions in ${SECTION_TITLES[activeStep]}.`);
+      return false;
+    }
+
+    if (activeStep === 0) {
+      const age = parseInt(answers.q1, 10);
+      if (Number.isNaN(age) || age <= 0 || age > 120) {
+        setError('Please enter a valid age (1-120).');
+        return false;
+      }
+    }
+
+    setError('');
+    return true;
+  };
 
   const handleNext = () => {
     if (activeStep === steps.length - 1) { setSubmitting(true); } 

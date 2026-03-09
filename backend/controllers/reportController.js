@@ -5,6 +5,85 @@ import fs from 'fs';
 import axios from 'axios';
 import FormData from 'form-data';
 
+const toNumber = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const toBinaryYesNo = (value) => {
+    if (typeof value === 'number') return value > 0 ? 1 : 0;
+    const normalized = String(value || '').trim().toLowerCase();
+    return ['yes', 'y', 'true', '1', 'female', 'f', 'present'].includes(normalized) ? 1 : 0;
+};
+
+const getParticles = (analysis = {}) => {
+    if (analysis && typeof analysis === 'object' && analysis.particles && typeof analysis.particles === 'object') {
+        return analysis.particles;
+    }
+    return analysis || {};
+};
+
+const getCount = (particles, key) => {
+    const node = particles?.[key] || {};
+    if (Number.isFinite(Number(node.total_count))) return Number(node.total_count);
+    if (Number.isFinite(Number(node.total_particles_detected))) return Number(node.total_particles_detected);
+    if (Number.isFinite(Number(node.count))) return Number(node.count);
+    if (Array.isArray(node.boxes)) return node.boxes.length;
+    return 0;
+};
+
+const detectImageBasedUTI = (analysis = {}) => {
+    const particles = getParticles(analysis);
+    const wbcCount = getCount(particles, 'wbc');
+    const yeastCount = getCount(particles, 'yeast');
+
+    const bacteria = particles?.bacteria || {};
+    const bacteriaCount = getCount(particles, 'bacteria');
+    const ecoliCount = toNumber(bacteria.ecoli_count);
+    const bacteriaRisk = String(bacteria?.risk_assessment?.level || '').toLowerCase();
+    const bacteriaDetected = bacteriaCount > 0 || ecoliCount > 0 || bacteriaRisk.includes('positive');
+
+    const diagnoses = analysis?.diagnosis?.diagnoses;
+    const diagnosisUti = Array.isArray(diagnoses)
+        ? diagnoses.some((d) => String(d?.name || '').toLowerCase().includes('urinary tract infection'))
+        : false;
+
+    return (wbcCount >= 5 || bacteriaDetected || yeastCount >= 3 || diagnosisUti);
+};
+
+const buildClinicalPayload = (questionnaireData = {}) => {
+    const genderRaw = questionnaireData.gender ?? questionnaireData.q2;
+    const gender = (() => {
+        const normalized = String(genderRaw || '').trim().toLowerCase();
+        if (['female', 'f', '1'].includes(normalized)) return 1;
+        if (['male', 'm', '0'].includes(normalized)) return 0;
+        return toNumber(genderRaw);
+    })();
+
+    const temperatureRaw = questionnaireData.temperature ?? questionnaireData.temp;
+    const temperature = Number.isFinite(Number(temperatureRaw)) ? Number(temperatureRaw) : undefined;
+
+    const payload = {
+        age: toNumber(questionnaireData.age ?? questionnaireData.q1),
+        gender,
+        dysuria: toBinaryYesNo(questionnaireData.dysuria ?? questionnaireData.q4),
+        abd_pain: toBinaryYesNo(questionnaireData.abd_pain ?? questionnaireData.abdPain ?? questionnaireData.q10),
+        fever: toBinaryYesNo(questionnaireData.fever ?? questionnaireData.q14),
+        polyuria: toBinaryYesNo(questionnaireData.polyuria ?? questionnaireData.q5),
+        nausea: toBinaryYesNo(questionnaireData.nausea ?? questionnaireData.q13),
+        lumbar_pain: toBinaryYesNo(questionnaireData.lumbar_pain ?? questionnaireData.lumbarPain ?? questionnaireData.q11),
+        urine_pushing: toBinaryYesNo(questionnaireData.urine_pushing ?? questionnaireData.urinaryUrgency ?? questionnaireData.q6),
+        micturition_pain: toBinaryYesNo(questionnaireData.micturition_pain ?? questionnaireData.micturitionPain ?? questionnaireData.q4),
+        urethral_burning: toBinaryYesNo(questionnaireData.urethral_burning ?? questionnaireData.urethralBurning ?? questionnaireData.q4),
+    };
+
+    if (temperature !== undefined) {
+        payload.temperature = temperature;
+    }
+
+    return payload;
+};
+
 // @desc    Get all reports (with patient and uploader details)
 // @route   GET /api/reports
 // @access  Private
@@ -35,9 +114,7 @@ export const uploadImage = async (req, res, next) => {
             return res.status(400).json({ success: false, error: 'Please upload an image file' });
         }
 
-        const { patientId } = req.body;
-
-        // Call ML Core Service - Image analysis only (particle detection)
+        // Call ML Core Service
         const formData = new FormData();
         formData.append('file', fs.createReadStream(req.file.path));
 
@@ -53,18 +130,14 @@ export const uploadImage = async (req, res, next) => {
             return res.status(500).json({ success: false, error: 'ML Core server not reachable' });
         }
 
-        // Determine if UTI is detected from image
-        const wbcCount = mlResponse.data?.wbc?.total_count || 0;
-        const yeastCount = mlResponse.data?.yeast?.total_count || 0;
-        const bacteriaDetected = mlResponse.data?.bacteria?.detected || false;
-
-        const utiDetectedFromImage = (wbcCount >= 5 || bacteriaDetected || yeastCount >= 3);
+        const utiDetectedFromImage = detectImageBasedUTI(mlResponse.data);
 
         res.status(200).json({ 
             success: true, 
             data: {
                 imageUrl: `/uploads/${req.file.filename}`,
-                analysis: mlResponse.data
+                analysis: mlResponse.data,
+                utiDetectedFromImage
             }
         });
     } catch (error) {
@@ -77,7 +150,7 @@ export const uploadImage = async (req, res, next) => {
 // @access  Private (MLT)
 export const submitReport = async (req, res, next) => {
     try {
-        const { patientId, imageUrl, analysis, riskLevel, chemicalParameters } = req.body;
+        const { patientId, imageUrl, analysis, riskLevel, chemicalParameters, utiDetectedFromImage } = req.body;
 
         if (!patientId || (!imageUrl && !analysis && !chemicalParameters)) {
             return res.status(400).json({ success: false, error: 'Missing required report data' });
@@ -99,9 +172,7 @@ export const submitReport = async (req, res, next) => {
             imageUrl,
             analysis,
             chemicalParameters,
-            imageUrl: `/uploads/${req.file.filename}`,
-            analysis: mlResponse.data,
-            utiDetectedFromImage: utiDetectedFromImage,
+            utiDetectedFromImage: typeof utiDetectedFromImage === 'boolean' ? utiDetectedFromImage : detectImageBasedUTI(analysis),
             status: 'Pending Verification'
         });
 
@@ -180,78 +251,63 @@ export const verifyReport = async (req, res, next) => {
 export const submitQuestionnaire = async (req, res, next) => {
     try {
         const reportId = req.params.id;
-        const questionnaireData = req.body;
+        const questionnaireData = req.body || {};
 
-        // Get the existing report with image analysis
         let report = await Report.findById(reportId);
         if (!report) {
             return res.status(404).json({ success: false, error: 'Report not found' });
         }
 
-        // If UTI was detected from image AND patient provided clinical data, run ML models
-        let updatedAnalysis = report.analysis;
-        
-        if (report.utiDetectedFromImage && questionnaireData) {
+        const clinicalPayload = buildClinicalPayload(questionnaireData);
+        let updatedAnalysis = report.analysis || {};
+
+        if (report.utiDetectedFromImage && report.imageUrl) {
             try {
-                // Prepare clinical data for UTI models (convert yes/no to 1/0)
-                const clinicalData = {
-                    age: parseInt(questionnaireData.age) || 0,
-                    gender: questionnaireData.gender === 'female' ? 1 : 0,
-                    dysuria: questionnaireData.dysuria === 'yes' ? 1 : 0,
-                    abd_pain: parseInt(questionnaireData.abd_pain) || 0,
-                    fever: questionnaireData.fever === 'yes' ? 1 : 0,
-                    polyuria: questionnaireData.polyuria === 'yes' ? 1 : 0,
-                    temperature: parseFloat(questionnaireData.temperature) || 0,
-                    nausea: questionnaireData.nausea === 'yes' ? 1 : 0,
-                    lumbar_pain: questionnaireData.lumbar_pain === 'yes' ? 1 : 0,
-                    urine_pushing: questionnaireData.urine_pushing === 'yes' ? 1 : 0,
-                    micturition_pain: questionnaireData.micturition_pain === 'yes' ? 1 : 0,
-                    urethral_burning: questionnaireData.urethral_burning === 'yes' ? 1 : 0
-                };
+                const imagePath = `./public${report.imageUrl}`;
+                if (fs.existsSync(imagePath)) {
+                    const metadataFormData = new FormData();
+                    metadataFormData.append('file', fs.createReadStream(imagePath));
 
-                // Get the image file from storage to re-analyze with metadata
-                const imageUrl = report.imageUrl; // e.g. /uploads/filename.jpg
-                const imagePath = `./public${imageUrl}`;
+                    Object.entries(clinicalPayload).forEach(([key, value]) => {
+                        if (value !== undefined && value !== null) {
+                            metadataFormData.append(key, value);
+                        }
+                    });
 
-                // Call ML Core with image + clinical data
-                const metadataFormData = new FormData();
-                metadataFormData.append('file', fs.createReadStream(imagePath));
-                
-                // Add clinical fields as form parameters
-                Object.keys(clinicalData).forEach(key => {
-                    metadataFormData.append(key, clinicalData[key]);
-                });
+                    const utiAnalysis = await axios.post('http://localhost:8000/analyze-with-metadata', metadataFormData, {
+                        headers: {
+                            ...metadataFormData.getHeaders()
+                        }
+                    });
 
-                const utiAnalysis = await axios.post('http://localhost:8000/analyze-with-metadata', metadataFormData, {
-                    headers: {
-                        ...metadataFormData.getHeaders()
-                    }
-                });
-
-                // Merge UTI clinical analysis with existing image analysis
-                updatedAnalysis = {
-                    ...report.analysis,
-                    clinical_dataset1: utiAnalysis.data?.clinical_dataset1 || null,
-                    clinical_dataset2: utiAnalysis.data?.clinical_dataset2 || null,
-                    fusion: utiAnalysis.data?.fusion || null
-                };
-
+                    updatedAnalysis = {
+                        ...(report.analysis || {}),
+                        clinical_dataset1: utiAnalysis.data?.clinical_dataset1 || null,
+                        clinical_dataset2: utiAnalysis.data?.clinical_dataset2 || null,
+                        fusion: utiAnalysis.data?.fusion || null,
+                        uti_rules: utiAnalysis.data?.uti_rules || null
+                    };
+                }
             } catch (error) {
                 console.error('UTI Clinical Analysis Error:', error.message);
-                // Log the error but don't fail - use image analysis only
-                console.warn('UTI clinical models unavailable, using image analysis only');
             }
         }
 
-        // Update report with questionnaire data and clinical analysis
-        report = await Report.findByIdAndUpdate(reportId, {
-            clinicalData: questionnaireData,
-            analysis: updatedAnalysis,
-            status: 'Pending Verification'
-        }, {
-            new: true,
-            runValidators: true
-        });
+        report = await Report.findByIdAndUpdate(
+            reportId,
+            {
+                clinicalData: {
+                    raw: questionnaireData,
+                    mappedForUti: clinicalPayload,
+                },
+                analysis: updatedAnalysis,
+                status: 'Pending Verification'
+            },
+            {
+                new: true,
+                runValidators: true
+            }
+        );
 
         res.status(200).json({ success: true, data: report });
     } catch (error) {
