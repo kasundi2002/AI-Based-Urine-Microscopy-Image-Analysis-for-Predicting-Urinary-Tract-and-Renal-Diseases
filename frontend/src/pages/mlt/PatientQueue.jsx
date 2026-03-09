@@ -138,18 +138,7 @@ const PatientQueue = ({ onSelectPatient }) => {
         setPatients(prev => [newPatient, ...prev]);
         handleCloseDialog();
         setShowSuccess(true);
-        // Try to send the secure access email (best-effort)
-        try {
-          const token = localStorage.getItem('token');
-          const response = await fetch('http://localhost:5000/api/patient-access/send-link', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ patientId: newPatient.patientId }),
-          });
-          if (response.ok) setShowEmailSent(true);
-        } catch (linkErr) {
-          console.warn('Could not send patient access email:', linkErr.message);
-        }
+        // Email sending code removed upon user request
       }
     } catch (err) {
       console.error(isEditing ? 'Failed to update patient' : 'Failed to add patient', err);
@@ -491,7 +480,7 @@ const PatientQueue = ({ onSelectPatient }) => {
               bgcolor: alpha('#00bcd4', 0.04), border: '1px solid', borderColor: alpha('#00bcd4', 0.12)
             }}>
               <Typography variant="caption" color="text.secondary">
-                <strong>Note:</strong> The patient will be registered with status <Chip label="Awaiting Analysis" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 600, mx: 0.5 }} /> and AI Risk <Chip label="Pending" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 600, mx: 0.5 }} />. A secure access link will be sent to the patient's email after registration.
+                <strong>Note:</strong> The patient will be registered with status <Chip label="Awaiting Analysis" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 600, mx: 0.5 }} /> and AI Risk <Chip label="Pending" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 600, mx: 0.5 }} />.
               </Typography>
             </Paper>
           )}

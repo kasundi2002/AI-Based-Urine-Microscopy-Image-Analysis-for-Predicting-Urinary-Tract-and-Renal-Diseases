@@ -1,90 +1,208 @@
 import nodemailer from 'nodemailer';
+import { buildUrineReportPdf } from './reportPdfService.js';
 
 /**
  * Creates a Nodemailer transport.
- * In dev, uses Ethereal (free test SMTP) — preview URL is logged.
- * In production, replace with real SMTP credentials via env vars.
+ * In dev, uses Ethereal (free test SMTP) and logs preview URL.
  */
 const createTransport = async () => {
-    // Standard SMTP or Gmail via env vars
     if (process.env.SMTP_USER && process.env.SMTP_PASS) {
         return nodemailer.createTransport({
             service: 'gmail',
             auth: {
                 user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
+                pass: process.env.SMTP_PASS
+            }
         });
     }
 
-    // Dev: auto-create an Ethereal test account if no credentials are provided
     const testAccount = await nodemailer.createTestAccount();
     return nodemailer.createTransport({
         host: 'smtp.ethereal.email',
         port: 587,
         auth: {
             user: testAccount.user,
-            pass: testAccount.pass,
-        },
+            pass: testAccount.pass
+        }
     });
+};
+
+const formatDateTime = (value) => {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'N/A';
+    return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
+const getMicroscopySummary = (report) => {
+    const counts = { wbc: 0, rbc: 0, crystals: 0, bacteria: 0 };
+    const detections = Array.isArray(report?.analysis?.detections)
+        ? report.analysis.detections
+        : [];
+
+    detections.forEach((item) => {
+        const rawClass = item?.class_name || item?.class || '';
+        const cls = String(rawClass).toLowerCase();
+        if (cls.includes('wbc') || cls.includes('leuko')) counts.wbc += 1;
+        if (cls.includes('rbc') || cls.includes('eryth')) counts.rbc += 1;
+        if (cls.includes('crystal') || cls.includes('cryst')) counts.crystals += 1;
+        if (cls.includes('bacteria') || cls.includes('bacter') || cls.includes('bacilli') || cls.includes('cocci')) counts.bacteria += 1;
+    });
+
+    return counts;
+};
+
+const getChemicalFlags = (chemicalParameters) => {
+    if (!chemicalParameters) return [];
+
+    const flags = [];
+    const maybePush = (label, value, abnormal) => {
+        if (value === undefined || value === null || value === '') return;
+        if (abnormal) flags.push(`${label}: ${value}`);
+    };
+
+    maybePush('Protein', chemicalParameters.protein, chemicalParameters.protein !== 'Nil');
+    maybePush('Glucose', chemicalParameters.glucose, chemicalParameters.glucose !== 'Nil');
+    maybePush('Ketone Bodies', chemicalParameters.ketoneBodies, chemicalParameters.ketoneBodies !== 'Nil');
+    maybePush('Bilirubin', chemicalParameters.bilirubin, chemicalParameters.bilirubin !== 'Nil');
+    maybePush('Blood (Occult)', chemicalParameters.blood, chemicalParameters.blood !== 'Nil');
+    maybePush('Nitrite', chemicalParameters.nitrite, chemicalParameters.nitrite === 'Positive');
+    maybePush('Urobilinogen', chemicalParameters.urobilinogen, chemicalParameters.urobilinogen === 'Elevated');
+
+    return flags.slice(0, 4);
+};
+
+const buildClinicalSummaryHtml = (patient, report) => {
+    const reportDate = formatDateTime(report?.createdAt);
+    const riskLevel = report?.analysis?.risk_level || patient?.riskAssessment || 'Pending';
+    const microscopy = getMicroscopySummary(report);
+    const chemicalFlags = getChemicalFlags(report?.chemicalParameters);
+
+    const findings = [
+        `WBC: ${microscopy.wbc} /hpf`,
+        `RBC: ${microscopy.rbc} /hpf`,
+        `Crystals: ${microscopy.crystals}`,
+        `Bacteria: ${microscopy.bacteria}`
+    ];
+
+    if (chemicalFlags.length > 0) {
+        findings.push(...chemicalFlags);
+    }
+
+    const findingList = findings
+        .map((item) => `<li style="margin: 0 0 6px 0;">${item}</li>`)
+        .join('');
+
+    return `
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-top: 18px;">
+            <tr>
+                <td style="padding: 10px 12px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; font-size: 12px; font-weight: 700; color: #0f172a;">Clinical Summary</td>
+                <td style="padding: 10px 12px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 12px; color: #334155;">Urine Routine / Microscopy & Chemical Analysis</td>
+            </tr>
+            <tr>
+                <td style="padding: 10px 12px; font-size: 12px; color: #334155; width: 50%;">Patient: <strong>${patient.name}</strong><br/>Patient ID: <strong>${patient.patientId}</strong></td>
+                <td style="padding: 10px 12px; font-size: 12px; color: #334155; width: 50%;">Report Date: <strong>${reportDate}</strong><br/>Specimen Type: <strong>Urine</strong></td>
+            </tr>
+            <tr>
+                <td colspan="2" style="padding: 10px 12px; font-size: 12px; color: #334155; border-top: 1px solid #e5e7eb;">
+                    Overall Impression: <strong>${riskLevel}</strong> risk pattern based on available urine findings.
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2" style="padding: 10px 12px; font-size: 12px; color: #334155; border-top: 1px solid #e5e7eb;">
+                    <div style="font-weight: 700; margin-bottom: 6px; color: #0f172a;">Key Findings</div>
+                    <ul style="margin: 0; padding-left: 18px; color: #475569;">
+                        ${findingList}
+                    </ul>
+                </td>
+            </tr>
+        </table>
+    `;
 };
 
 /**
  * Sends a secure access link to the patient's email.
+ * Adds a clinical summary and attaches a urine report PDF when report data is available.
  * @param {Object} patient - Patient document from MongoDB
- * @param {string} token   - The raw access token (before hashing)
+ * @param {string} token - Raw access token (before hashing)
+ * @param {Object|null} report - Latest report document
  */
-export const sendAccessEmail = async (patient, token) => {
+export const sendAccessEmail = async (patient, token, report = null) => {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const link = `${frontendUrl}/patient-verify?token=${token}`;
 
     const transporter = await createTransport();
+    const reportDateStamp = report?.createdAt
+        ? new Date(report.createdAt).toISOString().slice(0, 10)
+        : new Date().toISOString().slice(0, 10);
+
+    const attachments = [];
+    if (report) {
+        const pdfBuffer = buildUrineReportPdf(patient, report);
+        attachments.push({
+            filename: `Urine_Full_Report_${patient.patientId || 'Patient'}_${reportDateStamp}.pdf`,
+            content: pdfBuffer,
+            contentType: 'application/pdf'
+        });
+    }
+
+    const clinicalSummaryHtml = buildClinicalSummaryHtml(patient, report);
 
     const mailOptions = {
         from: `"UroAI Lab System" <${process.env.SMTP_USER || 'noreply@uroai.com'}>`,
         to: patient.email,
-        subject: 'Access Your Lab Results — UroAI Secure Portal',
+        subject: 'Urine Full Report Ready - UroAI Secure Access',
         html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+            <div style="font-family: Arial, sans-serif; max-width: 640px; margin: auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
                 <div style="background: linear-gradient(135deg, #0f172a, #1e3a5f); padding: 28px 32px; text-align: center;">
-                    <h1 style="color: white; margin: 0; font-size: 22px; letter-spacing: -0.5px;">UroAI Diagnostics Portal</h1>
-                    <p style="color: rgba(255,255,255,0.6); margin: 6px 0 0; font-size: 13px;">Secure Patient Access</p>
+                    <h1 style="color: white; margin: 0; font-size: 22px; letter-spacing: -0.3px;">UroAI Diagnostics Portal</h1>
+                    <p style="color: rgba(255,255,255,0.72); margin: 6px 0 0; font-size: 13px;">Secure Patient Notification</p>
                 </div>
-                <div style="padding: 32px;">
+                <div style="padding: 28px 32px;">
                     <p style="color: #333; font-size: 15px;">Dear <strong>${patient.name}</strong>,</p>
-                    <p style="color: #555; font-size: 14px; line-height: 1.6;">
-                        Your laboratory analysis results are ready. Please click the button below to securely access your personalised kidney stone risk report.
+                    <p style="color: #475569; font-size: 14px; line-height: 1.65; margin: 0;">
+                        Your urine full laboratory report is ready. A PDF copy is attached to this email for your records.
+                        You can also securely access your report details through the patient portal using the link below.
                     </p>
-                    <div style="text-align: center; margin: 32px 0;">
-                        <a href="${link}" style="
-                            background: linear-gradient(135deg, #0f172a, #1e3a5f);
-                            color: white; text-decoration: none; padding: 14px 36px;
-                            border-radius: 8px; font-weight: 700; font-size: 15px; display: inline-block;
-                        ">View My Results</a>
+
+                    ${clinicalSummaryHtml}
+
+                    <div style="text-align: center; margin: 26px 0 22px;">
+                        <a href="${link}" style="background: linear-gradient(135deg, #0f172a, #1e3a5f); color: #fff; text-decoration: none; padding: 14px 34px; border-radius: 8px; font-weight: 700; font-size: 14px; display: inline-block;">
+                            Access My Results Securely
+                        </a>
                     </div>
-                    <p style="color: #888; font-size: 12px; line-height: 1.6;">
-                        <strong>Note:</strong> You will be asked to verify your Patient ID and registered mobile number, then enter a One-Time Password (OTP) sent to your phone. This link expires in <strong>1 hour</strong>.
+
+                    <p style="color: #64748b; font-size: 12px; line-height: 1.65; margin: 0 0 10px 0;">
+                        Security note: You will verify your Patient ID and mobile number, then enter a one-time password (OTP). This secure link expires in <strong>1 hour</strong>.
                     </p>
-                    <p style="color: #aaa; font-size: 11px; margin-top: 24px;">
-                        If you did not request this, please ignore this email or contact your laboratory.
+                    <p style="color: #64748b; font-size: 12px; line-height: 1.65; margin: 0;">
+                        Medical disclaimer: This report is for clinical support and should be interpreted by a qualified healthcare professional in correlation with your clinical history.
                     </p>
                 </div>
-                <div style="background: #f8fafc; padding: 16px 32px; border-top: 1px solid #e0e0e0; text-align: center;">
-                    <p style="color: #aaa; font-size: 11px; margin: 0;">UroAI Diagnostics Platform — Confidential Medical Information</p>
+                <div style="background: #f8fafc; padding: 14px 28px; border-top: 1px solid #e0e0e0; text-align: center;">
+                    <p style="color: #94a3b8; font-size: 11px; margin: 0;">Confidential Medical Information - UroAI Diagnostics Platform</p>
                 </div>
             </div>
         `,
+        attachments
     };
 
     const info = await transporter.sendMail(mailOptions);
 
-    // In development, log the email action
     if (process.env.NODE_ENV !== 'production') {
         const previewUrl = nodemailer.getTestMessageUrl(info);
         console.log('\n========================================');
-        console.log('📧  PATIENT EMAIL SENT');
+        console.log('PATIENT EMAIL SENT');
         console.log(`    To: ${patient.email}`);
         console.log(`    Patient: ${patient.name} [${patient.patientId}]`);
+        console.log(`    Attachment: ${attachments.length > 0 ? 'Urine report PDF' : 'None (no report found)'}`);
         if (previewUrl) {
             console.log(`    Preview URL: ${previewUrl}`);
         } else {

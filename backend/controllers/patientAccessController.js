@@ -90,9 +90,14 @@ export const sendAccessLink = async (req, res, next) => {
         patient.accessTokenExpiry = new Date(Date.now() + expireMinutes * 60 * 1000);
         await patient.save();
 
+        // Get latest report for email clinical summary + PDF attachment
+        const latestReport = await Report.findOne({ patientId: patient._id })
+            .sort({ createdAt: -1 })
+            .lean();
+
         // Send email (non-blocking — don't crash if email fails)
         try {
-            await sendAccessEmail(patient, rawToken);
+            await sendAccessEmail(patient, rawToken, latestReport);
             patient.emailSent = true;
             await patient.save();
         } catch (emailErr) {
