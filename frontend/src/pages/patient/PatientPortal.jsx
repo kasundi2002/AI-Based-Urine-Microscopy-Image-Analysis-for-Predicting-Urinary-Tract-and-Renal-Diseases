@@ -91,14 +91,33 @@ const PatientPortal = () => {
 
   // Extract data from report
   const analysis = report?.analysis || {};
-  const getCount = (node) => Number(node?.total_count || node?.count || 0);
-  const wbcCount = getCount(analysis?.wbc);
-  const rbcCount = getCount(analysis?.rbc);
-  const crystalCount = getCount(analysis?.crystals);
-  const castCount = getCount(analysis?.casts);
-  const yeastCount = getCount(analysis?.yeast);
-  const bacteriaCount = getCount(analysis?.bacteria);
+  const particlesData = analysis?.particles || analysis || {};
+  const wbcData = particlesData?.wbc || {};
+  const rbcData = particlesData?.rbc || {};
+  const crystalsData = particlesData?.crystal || particlesData?.crystals || {};
+  const castsData = particlesData?.cast || particlesData?.casts || {};
+  const yeastData = particlesData?.yeast || {};
+  const bacteriaData = particlesData?.bacteria || {};
+
+  const getCount = (node) => {
+    if (!node || typeof node !== 'object') return 0;
+    if (Number.isFinite(Number(node.total_count))) return Number(node.total_count);
+    if (Number.isFinite(Number(node.count))) return Number(node.count);
+    if (Array.isArray(node.boxes)) return node.boxes.length;
+    if (node.subtype_summary && typeof node.subtype_summary === 'object') {
+      return Object.values(node.subtype_summary).reduce((sum, value) => sum + (Number(value) || 0), 0);
+    }
+    return 0;
+  };
+
+  const wbcCount = getCount(wbcData);
+  const rbcCount = getCount(rbcData);
+  const crystalCount = getCount(crystalsData);
+  const castCount = getCount(castsData);
+  const yeastCount = getCount(yeastData);
+  const bacteriaCount = getCount(bacteriaData);
   const totalDetections = wbcCount + rbcCount + crystalCount + castCount + yeastCount + bacteriaCount;
+  const riskLevel = analysis?.risk_level || patientInfo?.riskAssessment || 'Low';
 
   const baseRiskScore = riskLevel === 'High' ? 75 : riskLevel === 'Moderate' ? 45 : 20;
   const riskScore = riskPrediction?.riskScore || baseRiskScore;
@@ -152,7 +171,8 @@ const PatientPortal = () => {
     wbc: sediments[0].value, rbc: sediments[1].value, crystals: sediments[2].value, bacteria: `${bacteriaCount}`,
     chemicalParameters: report.chemicalParameters,
     questionnaireCompleted, enhancedRiskScore: riskPrediction?.riskScore, enhancedRiskLabel: riskPrediction?.riskLabel,
-    prescription: 'Drink plenty of water. Follow up in 3 months.', doctorNote: '- Dr. Smith (Urologist)',
+    prescription: doctorPrescription || 'No prescription added yet.',
+    doctorNote: doctorNotes || 'No clinician notes available.',
   } : null;
 
   const drawBoxes = () => {
@@ -179,14 +199,23 @@ const PatientPortal = () => {
       yeast: '#ff9800',
     };
 
-    Object.entries(analysis).forEach(([particleName, data]) => {
+    const boxSources = [
+      { key: 'wbc', data: wbcData },
+      { key: 'rbc', data: rbcData },
+      { key: 'crystals', data: crystalsData },
+      { key: 'casts', data: castsData },
+      { key: 'bacteria', data: bacteriaData },
+      { key: 'yeast', data: yeastData },
+    ];
+
+    boxSources.forEach(({ key, data }) => {
       const boxes = Array.isArray(data?.boxes) ? data.boxes : [];
       if (boxes.length === 0) return;
 
-      const color = colorByType[particleName] || '#ffffff';
+      const color = colorByType[key] || '#ffffff';
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
-      ctx.lineWidth = particleName === 'rbc' ? 1 : 2;
+      ctx.lineWidth = key === 'rbc' ? 1 : 2;
       ctx.font = '12px Arial';
 
       boxes.forEach((box) => {
@@ -198,7 +227,7 @@ const PatientPortal = () => {
         const y2 = rawY2 * scaleY;
 
         ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-        const label = box?.subtype ? `${particleName}: ${box.subtype}` : particleName;
+        const label = box?.subtype ? `${key}: ${box.subtype}` : key;
         ctx.fillText(label, x1, Math.max(10, y1 - 4));
       });
     });
@@ -209,7 +238,7 @@ const PatientPortal = () => {
     const onResize = () => drawBoxes();
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, [report, analysis]);
+  }, [report, imageUrl]);
 
   const handleQuestionnaireComplete = (formData) => {
     const prediction = generateRiskPrediction(formData, report);
@@ -312,7 +341,7 @@ const PatientPortal = () => {
           </Toolbar>
         </AppBar>
         <Box sx={{ pt: '72px', px: 3, pb: 4, maxWidth: 900, mx: 'auto' }}>
-          <Questionnaire onComplete={handleQuestionnaireComplete} />
+          <Questionnaire onComplete={handleQuestionnaireComplete} patientDetails={patientInfo} />
         </Box>
       </Box>
     );
