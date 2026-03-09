@@ -61,7 +61,7 @@ const LabelTag = styled(Box)(({ color }) => ({
 }));
 
 const StatChip = styled(Paper)(({ theme }) => ({
-  padding: '12px 16px',
+  padding: '8px 16px',
   borderRadius: 12,
   display: 'flex',
   alignItems: 'center',
@@ -125,7 +125,6 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
 
     Object.entries(analysis.particles).forEach(([particleName, data]) => {
       if (!data || !data.detected) return;
-      if (particleName === "yeast") return; // hide yeast boundary boxes on canvas
 
       data.boxes.forEach(box => {
         const [rawX1, rawY1, rawX2, rawY2] = box.bbox;
@@ -340,7 +339,7 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
               Analysis Workspace
             </Typography>
           </Box>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{ color: '#8898aa' }}>
             AI-powered urine microscopy sediment detection and classification
           </Typography>
         </Box>
@@ -431,14 +430,14 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
       <Paper
         elevation={0}
         sx={{
-          p: 1.5, mb: 1.5, borderRadius: 3,
+          px: 2, py: 1, mb: 1.5, borderRadius: 3,
           border: '1px solid', borderColor: 'divider',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar sx={{ width: 44, height: 44, bgcolor: alpha('#00bcd4', 0.1), color: '#00bcd4' }}>
-            <PersonIcon />
+          <Avatar sx={{ width: 38, height: 38, bgcolor: alpha('#00bcd4', 0.1), color: '#00bcd4' }}>
+            <PersonIcon sx={{ fontSize: 20 }} />
           </Avatar>
           <Box>
             <Typography variant="subtitle1" fontWeight={700}>{patient?.name || "Kane Peter"}</Typography>
@@ -464,12 +463,12 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
             </Box>
           </StatChip>
           <StatChip elevation={0}>
-            <Box sx={{ p: 0.8, borderRadius: 2, bgcolor: alpha('#ab47bc', 0.1) }}>
-              <BiotechIcon sx={{ fontSize: 18, color: '#ab47bc', display: 'block' }} />
+            <Box sx={{ p: 0.8, borderRadius: 2, bgcolor: alpha('#4caf50', 0.1) }}>
+              <BiotechIcon sx={{ fontSize: 18, color: '#4caf50', display: 'block' }} />
             </Box>
             <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1 }}>AI Confidence</Typography>
-              <Typography variant="subtitle2" fontWeight={800}>98.5%</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1 }}>Verification</Typography>
+              <Typography variant="subtitle2" fontWeight={800}>{patient?.status === 'Completed' ? 'Verified' : 'Pending Review'}</Typography>
             </Box>
           </StatChip>
           <StatChip elevation={0}>
@@ -539,11 +538,12 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
             }}>
               <Typography variant="caption" fontWeight={600} color="text.secondary" sx={{ mr: 1 }}>LEGEND:</Typography>
               {[
-                { label: 'WBC', color: '#00bcd4' },
-                { label: 'RBC', color: '#ef5350' },
-                { label: 'Crystal', color: '#ff9100' },
-                { label: 'Cast', color: '#ab47bc' },
-                { label: 'Bacteria', color: '#66bb6a' },
+                { label: 'WBC', color: '#9c27b0' },
+                { label: 'RBC', color: '#f44336' },
+                { label: 'Crystal', color: '#2196f3' },
+                { label: 'Cast', color: '#4caf50' },
+                { label: 'Bacteria', color: '#00bcd4' },
+                { label: 'Yeast', color: '#ff9800' },
               ].map(l => (
                 <Box key={l.label} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <Box sx={{ width: 8, height: 8, borderRadius: 1, bgcolor: l.color }} />
@@ -573,16 +573,7 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Box>
                   <Typography variant="subtitle1" fontWeight={700}>AI Detection Report</Typography>
-                  <Typography variant="caption" sx={{ opacity: 0.7 }}>Automated sediment classification</Typography>
                 </Box>
-                <Chip
-                  label="98.5% Accuracy"
-                  size="small"
-                  sx={{
-                    bgcolor: alpha('#66bb6a', 0.2), color: '#a5d6a7', fontWeight: 700, fontSize: '0.7rem',
-                    border: '1px solid', borderColor: alpha('#66bb6a', 0.3)
-                  }}
-                />
               </Box>
             </Box>
 

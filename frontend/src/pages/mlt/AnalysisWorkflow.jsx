@@ -217,7 +217,7 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
             <ScienceIcon sx={{ color: '#00bcd4', fontSize: 28 }} />
             <Typography variant="h5" fontWeight={800} sx={{ letterSpacing: -0.5 }}>Analysis Workspace</Typography>
           </Box>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{ color: '#8898aa' }}>
             Select a patient, upload a microscopy image, and run AI analysis
           </Typography>
         </Box>

@@ -566,6 +566,7 @@ const PatientPortal = () => {
                       { label: 'RBC', color: '#f44336' },
                       { label: 'Crystal', color: '#2196f3' },
                       { label: 'Cast', color: '#4caf50' },
+                      { label: 'Bacteria', color: '#00bcd4' },
                       { label: 'Yeast', color: '#ff9800' },
                     ].map((item) => (
                       <Box key={item.label} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -667,13 +668,14 @@ const PatientPortal = () => {
                                 ? { icon: <RestaurantIcon />, color: '#ff9100' }
                                 : { icon: <FitnessCenterIcon />, color: '#7c4dff' };
                             return (
-                            <Paper key={i} elevation={0} sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1.5, borderRadius: 2.5, border: '1px solid', borderColor: 'divider', transition: 'all 0.15s', '&:hover': { borderColor: alpha(item.color, 0.3), bgcolor: alpha(item.color, 0.02) } }}>
-                              <Box sx={{ p: 0.8, borderRadius: 2, bgcolor: alpha(item.color, 0.08), color: item.color, display: 'flex' }}>
-                                {React.cloneElement(item.icon, { sx: { fontSize: 18 } })}
-                              </Box>
-                              <Typography variant="body2" fontWeight={500}>{text}</Typography>
-                            </Paper>
-                          )})}
+                              <Paper key={i} elevation={0} sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1.5, borderRadius: 2.5, border: '1px solid', borderColor: 'divider', transition: 'all 0.15s', '&:hover': { borderColor: alpha(item.color, 0.3), bgcolor: alpha(item.color, 0.02) } }}>
+                                <Box sx={{ p: 0.8, borderRadius: 2, bgcolor: alpha(item.color, 0.08), color: item.color, display: 'flex' }}>
+                                  {React.cloneElement(item.icon, { sx: { fontSize: 18 } })}
+                                </Box>
+                                <Typography variant="body2" fontWeight={500}>{text}</Typography>
+                              </Paper>
+                            )
+                          })}
                         </Box>
                       </Grid>
                     </Grid>
