@@ -112,7 +112,7 @@ const emptyAnswers = (patientDetails) => {
   return answers;
 };
 
-const Questionnaire = ({ onComplete, patientDetails }) => {
+const Questionnaire = ({ onComplete, patientDetails, reportId }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -151,6 +151,8 @@ const Questionnaire = ({ onComplete, patientDetails }) => {
 
   useEffect(() => {
     if (!submitting) return undefined;
+
+    let cancelled = false;
     setProgress(0);
     const interval = setInterval(() => {
       setProgress((prev) => {
@@ -159,16 +161,39 @@ const Questionnaire = ({ onComplete, patientDetails }) => {
       });
     }, 70);
 
-    const timer = setTimeout(() => {
-      clearInterval(interval);
-      onComplete(answers);
-    }, 3800);
+    const submitAsync = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+
+      try {
+        if (reportId) {
+          const token = localStorage.getItem('patientToken') || localStorage.getItem('token');
+          await fetch(`http://localhost:5000/api/reports/${reportId}/submit-questionnaire`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(answers),
+          });
+        }
+      } catch (err) {
+        console.error('Questionnaire backend submission failed:', err);
+      }
+
+      if (!cancelled) {
+        clearInterval(interval);
+        setProgress(100);
+        onComplete(answers);
+      }
+    };
+
+    submitAsync();
 
     return () => {
+      cancelled = true;
       clearInterval(interval);
-      clearTimeout(timer);
     };
-  }, [submitting, onComplete, answers]);
+  }, [submitting, onComplete, answers, reportId]);
 
   const visibleQuestions = (sectionIndex) => {
     return (questionsBySection[sectionIndex] || []).filter((q) => {

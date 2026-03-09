@@ -341,7 +341,7 @@ const PatientPortal = () => {
           </Toolbar>
         </AppBar>
         <Box sx={{ pt: '72px', px: 3, pb: 4, maxWidth: 900, mx: 'auto' }}>
-          <Questionnaire onComplete={handleQuestionnaireComplete} patientDetails={patientInfo} />
+          <Questionnaire reportId={report?._id} onComplete={handleQuestionnaireComplete} patientDetails={patientInfo} />
         </Box>
       </Box>
     );

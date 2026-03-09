@@ -24,6 +24,13 @@ const reportSchema = new mongoose.Schema({
     chemicalParameters: {
         type: mongoose.Schema.Types.Mixed // Chemical urine test results entered by MLT
     },
+    clinicalData: {
+        type: mongoose.Schema.Types.Mixed // Questionnaire data submitted by patient
+    },
+    utiDetectedFromImage: {
+        type: Boolean,
+        default: false
+    },
     status: {
         type: String,
         enum: ['Pending Verification', 'Verified', 'Rejected'],

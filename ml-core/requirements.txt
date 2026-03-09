@@ -6,5 +6,8 @@ numpy
 pillow
 torch
 torchvision
+timm
 tensorflow
 python-multipart
+joblib
+scikit-learn
