@@ -5,7 +5,6 @@ import tensorflow as tf
 
 import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from particles.crystal.predictor import CrystalPredictor
 
 class CrystalPipeline:
     def __init__(self):
@@ -23,8 +22,6 @@ class CrystalPipeline:
             self.model = tf.keras.models.load_model(model_path)
         except Exception as e:
             raise RuntimeError(f"Failed to load classifier model: {e}")
-            
-        self.predictor = CrystalPredictor()
 
     def preprocess(self, img_array):
         # Convert BGR to RGB (assuming img_array from cv2 imread)
@@ -107,17 +104,9 @@ class CrystalPipeline:
                 "boxes": []
             }
         
-        # Clean counts map for return (remove 0 entries if desired, but user example implies full map or counts dict is fine)
-        # Process disease risk rules
-        prediction = self.predictor.predict(counts, total_crystals)
-        
         return {
             "detected": True,
             "total_count": total_crystals,
             "boxes": enriched_boxes,
-            "subtype_summary": counts,
-            "risk_assessment": {
-                "level": prediction["stone_risk_level"],
-                "clinical_suggestion": prediction["clinical_suggestion"]
-            }
+            "subtype_summary": counts
         }

@@ -12,8 +12,5 @@ class BacteriaPipeline:
         return {
             "detected": True,
             "total_count": count,
-            "boxes": detections.get("boxes", []),
-            "risk_assessment": {
-                "level": "Bacteria Detected"
-            }
+            "boxes": detections.get("boxes", [])
         }

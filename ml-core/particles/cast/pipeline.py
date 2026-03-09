@@ -7,7 +7,6 @@ from torchvision.models import efficientnet_b2, EfficientNet_B2_Weights
 
 import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from particles.cast.predictor import CastPredictor
 
 class CastPipeline:
     def __init__(self):
@@ -37,8 +36,6 @@ class CastPipeline:
         self.model.load_state_dict(state_dict, strict=True)
         self.model.to(self.device)
         self.model.eval()
-        
-        self.predictor = CastPredictor()
 
     def predict_subtype(self, crop_np: np.ndarray):
         image = cv2.resize(crop_np, (260, 260))
@@ -93,14 +90,9 @@ class CastPipeline:
                 "boxes": []
             }
             
-        disease_risk = self.predictor.predict_disease_risk(total_count)
-        
         return {
             "detected": True,
             "total_count": total_count,
             "boxes": enriched_boxes,
-            "subtype_summary": subtypes_counts,
-            "risk_assessment": {
-                "level": disease_risk
-            }
+            "subtype_summary": subtypes_counts
         }

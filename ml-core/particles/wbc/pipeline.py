@@ -1,8 +1,6 @@
-from particles.wbc.predictor import WBCPredictor
-
 class WBCPipeline:
     def __init__(self):
-        self.predictor = WBCPredictor()
+        pass
 
     def process(self, image_np, detections):
         count = detections.get("count", 0)
@@ -14,12 +12,8 @@ class WBCPipeline:
                 "boxes": []
             }
         else:
-            prediction_result = self.predictor.decide_uti(count)
             return {
                 "detected": True,
                 "total_count": count,
-                "boxes": detections.get("boxes", []),
-                "risk_assessment": {
-                    "level": prediction_result
-                }
+                "boxes": detections.get("boxes", [])
             }

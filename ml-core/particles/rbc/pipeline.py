@@ -45,9 +45,6 @@ class RBCPipeline:
                 "subtype_summary": {
                     "isomorphic": 0,
                     "dysmorphic": 0
-                },
-                "risk_assessment": {
-                    "dysmorphic_percentage": 0.0
                 }
             }
 
@@ -98,8 +95,6 @@ class RBCPipeline:
                 "subtype_prob": round(prob, 4)
             })
 
-        dys_percent = (dys_count / count) * 100 if count > 0 else 0.0
-
         return {
             "detected": True,
             "total_count": count,
@@ -107,8 +102,5 @@ class RBCPipeline:
             "subtype_summary": {
                 "isomorphic": iso_count,
                 "dysmorphic": dys_count
-            },
-            "risk_assessment": {
-                "dysmorphic_percentage": round(dys_percent, 2)
             }
         }
