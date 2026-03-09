@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box, Typography, Avatar, Paper, Button, Chip, CircularProgress, AppBar, Toolbar,
   IconButton, Grid, Table, TableBody, TableRow, TableCell, Alert, Snackbar, CssBaseline
@@ -43,9 +43,12 @@ const PatientPortal = () => {
   const [showQuestionnaire, setShowQuestionnaire] = useState(false);
   const [questionnaireCompleted, setQuestionnaireCompleted] = useState(false);
   const [riskPrediction, setRiskPrediction] = useState(null);
+  const [patientInfo, setPatientInfo] = useState(storedPatientInfo);
+  const imgRef = useRef(null);
+  const canvasRef = useRef(null);
 
-  const patientName = storedPatientInfo?.name || 'Patient';
-  const displayPatientId = storedPatientInfo?.patientId || 'N/A';
+  const patientName = patientInfo?.name || storedPatientInfo?.name || 'Patient';
+  const displayPatientId = patientInfo?.patientId || storedPatientInfo?.patientId || 'N/A';
 
   const getToken = () => patientToken || localStorage.getItem('patientToken') || localStorage.getItem('token');
 
@@ -64,6 +67,7 @@ const PatientPortal = () => {
 
         // Update patient info from the response if available
         if (data.patient) {
+          setPatientInfo(data.patient);
           localStorage.setItem('patientInfo', JSON.stringify(data.patient));
         }
 
@@ -87,12 +91,14 @@ const PatientPortal = () => {
 
   // Extract data from report
   const analysis = report?.analysis || {};
-  const detections = analysis.detections || [];
-  const countByClass = {};
-  detections.forEach(d => {
-    const cls = d.class_name || d.class || 'Unknown';
-    countByClass[cls] = (countByClass[cls] || 0) + 1;
-  });
+  const getCount = (node) => Number(node?.total_count || node?.count || 0);
+  const wbcCount = getCount(analysis?.wbc);
+  const rbcCount = getCount(analysis?.rbc);
+  const crystalCount = getCount(analysis?.crystals);
+  const castCount = getCount(analysis?.casts);
+  const yeastCount = getCount(analysis?.yeast);
+  const bacteriaCount = getCount(analysis?.bacteria);
+  const totalDetections = wbcCount + rbcCount + crystalCount + castCount + yeastCount + bacteriaCount;
 
   const riskLevel = analysis.risk_level || 'Low';
   const baseRiskScore = riskLevel === 'High' ? 75 : riskLevel === 'Moderate' ? 45 : 20;
@@ -108,22 +114,79 @@ const PatientPortal = () => {
       : 'linear-gradient(135deg, #66bb6a, #2e7d32)';
 
   const reportDate = report ? new Date(report.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+  const imageUrl = report?.imageUrl ? `http://localhost:5000${report.imageUrl}` : '';
 
   const sediments = [
-    { label: 'WBC', value: `${countByClass['WBC'] || countByClass['wbc'] || 0}`, unit: '/hpf', color: '#00bcd4', icon: <ShieldIcon /> },
-    { label: 'RBC', value: `${countByClass['RBC'] || countByClass['rbc'] || 0}`, unit: '/hpf', color: '#ef5350', icon: <BloodtypeIcon /> },
-    { label: 'Crystals', value: countByClass['Crystal'] || countByClass['Crystals'] || countByClass['crystal'] ? `${countByClass['Crystal'] || countByClass['Crystals'] || countByClass['crystal']}` : 'None', unit: '', color: '#ff9100', icon: <DiamondIcon /> },
-    { label: 'Bacteria', value: countByClass['Bacteria'] || countByClass['bacteria'] ? `${countByClass['Bacteria'] || countByClass['bacteria']}` : 'None', unit: '', color: '#66bb6a', icon: <BugReportIcon /> },
+    { label: 'WBC', value: `${wbcCount}`, unit: '/hpf', color: '#00bcd4', icon: <ShieldIcon /> },
+    { label: 'RBC', value: `${rbcCount}`, unit: '/hpf', color: '#ef5350', icon: <BloodtypeIcon /> },
+    { label: 'Crystals', value: `${crystalCount}`, unit: '', color: '#ff9100', icon: <DiamondIcon /> },
+    { label: 'Casts', value: `${castCount}`, unit: '', color: '#66bb6a', icon: <BiotechIcon /> },
   ];
 
   // Build PDF-compatible report object
   const pdfReport = report ? {
     date: reportDate, riskScore, riskLabel,
-    wbc: sediments[0].value, rbc: sediments[1].value, crystals: sediments[2].value, bacteria: sediments[3].value,
+    wbc: sediments[0].value, rbc: sediments[1].value, crystals: sediments[2].value, bacteria: `${bacteriaCount}`,
     chemicalParameters: report.chemicalParameters,
     questionnaireCompleted, enhancedRiskScore: riskPrediction?.riskScore, enhancedRiskLabel: riskPrediction?.riskLabel,
     prescription: 'Drink plenty of water. Follow up in 3 months.', doctorNote: '- Dr. Smith (Urologist)',
   } : null;
+
+  const drawBoxes = () => {
+    const img = imgRef.current;
+    const canvas = canvasRef.current;
+    if (!img || !canvas || !analysis || !img.naturalWidth || !img.naturalHeight) return;
+
+    const displayWidth = img.offsetWidth;
+    const displayHeight = img.offsetHeight;
+    canvas.width = displayWidth;
+    canvas.height = displayHeight;
+
+    const ctx = canvas.getContext('2d');
+    const scaleX = displayWidth / img.naturalWidth;
+    const scaleY = displayHeight / img.naturalHeight;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const colorByType = {
+      wbc: '#9c27b0',
+      rbc: '#f44336',
+      crystals: '#2196f3',
+      casts: '#4caf50',
+      bacteria: '#00bcd4',
+      yeast: '#ff9800',
+    };
+
+    Object.entries(analysis).forEach(([particleName, data]) => {
+      const boxes = Array.isArray(data?.boxes) ? data.boxes : [];
+      if (boxes.length === 0) return;
+
+      const color = colorByType[particleName] || '#ffffff';
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = particleName === 'rbc' ? 1 : 2;
+      ctx.font = '12px Arial';
+
+      boxes.forEach((box) => {
+        if (!Array.isArray(box?.bbox) || box.bbox.length < 4) return;
+        const [rawX1, rawY1, rawX2, rawY2] = box.bbox;
+        const x1 = rawX1 * scaleX;
+        const y1 = rawY1 * scaleY;
+        const x2 = rawX2 * scaleX;
+        const y2 = rawY2 * scaleY;
+
+        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        const label = box?.subtype ? `${particleName}: ${box.subtype}` : particleName;
+        ctx.fillText(label, x1, Math.max(10, y1 - 4));
+      });
+    });
+  };
+
+  useEffect(() => {
+    drawBoxes();
+    const onResize = () => drawBoxes();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [report, analysis]);
 
   const handleQuestionnaireComplete = (formData) => {
     const prediction = generateRiskPrediction(formData, report);
@@ -259,7 +322,7 @@ const PatientPortal = () => {
           </Box>
           <Box sx={{ flexGrow: 1 }} />
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Chip label={patientName} size="small" avatar={<Avatar sx={{ bgcolor: '#00bcd4' }}>{patientName.charAt(0)}</Avatar>}
+            <Chip label={patientName} size="small" avatar={<Avatar sx={{ bgcolor: '#00bcd4' }}>{patientName?.charAt(0) || 'P'}</Avatar>}
               sx={{ color: 'white', fontWeight: 600, fontSize: '0.75rem', bgcolor: alpha('#fff', 0.08), border: '1px solid', borderColor: alpha('#fff', 0.1) }} />
             <IconButton size="small" onClick={handleLogout} sx={{ color: alpha('#fff', 0.6), '&:hover': { color: '#ef5350' } }}>
               <LogoutIcon sx={{ fontSize: 18 }} />
@@ -293,6 +356,12 @@ const PatientPortal = () => {
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 0.5 }}>
                   <Chip label={`ID: ${displayPatientId}`} size="small" sx={{ bgcolor: alpha('#fff', 0.1), color: 'white', fontWeight: 600, fontSize: '0.7rem', height: 22 }} />
+                  {patientInfo?.age && (
+                    <Chip label={`Age: ${patientInfo.age}`} size="small" sx={{ bgcolor: alpha('#fff', 0.1), color: 'white', fontWeight: 600, fontSize: '0.7rem', height: 22 }} />
+                  )}
+                  {patientInfo?.gender && (
+                    <Chip label={`Sex: ${patientInfo.gender}`} size="small" sx={{ bgcolor: alpha('#fff', 0.1), color: 'white', fontWeight: 600, fontSize: '0.7rem', height: 22 }} />
+                  )}
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, opacity: 0.7 }}>
                     <CalendarTodayIcon sx={{ fontSize: 13 }} />
                     <Typography variant="caption">Report: {reportDate}</Typography>
@@ -410,20 +479,52 @@ const PatientPortal = () => {
                 <Paper elevation={0} sx={{ height: '100%', borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                   <Box sx={{ px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
                     <Typography variant="subtitle1" fontWeight={700}>Microscopy Analysis</Typography>
-                    <Typography variant="caption" color="text.secondary">AI-detected sediments in sample</Typography>
+                    <Typography variant="caption" color="text.secondary">AI-detected sediments with bounding boxes</Typography>
                   </Box>
-                  {report.imageUrl ? (
+                  {imageUrl ? (
                     <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 1.5, bgcolor: '#000' }}>
-                      <img src={`http://localhost:5000${report.imageUrl}`} alt="Microscopy" style={{ maxWidth: '100%', maxHeight: 240, objectFit: 'contain', borderRadius: 8 }} />
+                      <Box sx={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}>
+                        <img
+                          ref={imgRef}
+                          src={imageUrl}
+                          alt="Microscopy"
+                          onLoad={drawBoxes}
+                          style={{ maxWidth: '100%', maxHeight: 240, objectFit: 'contain', borderRadius: 8, display: 'block' }}
+                        />
+                        <canvas
+                          ref={canvasRef}
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            pointerEvents: 'none',
+                            borderRadius: 8,
+                          }}
+                        />
+                      </Box>
                     </Box>
                   ) : (
                     <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 3 }}>
                       <Typography variant="body2" color="text.disabled">No microscopy image available</Typography>
                     </Box>
                   )}
+                  <Box sx={{ px: 3, py: 1, borderTop: '1px solid', borderColor: 'divider', display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+                    {[
+                      { label: 'WBC', color: '#9c27b0' },
+                      { label: 'RBC', color: '#f44336' },
+                      { label: 'Crystal', color: '#2196f3' },
+                      { label: 'Cast', color: '#4caf50' },
+                      { label: 'Yeast', color: '#ff9800' },
+                    ].map((item) => (
+                      <Box key={item.label} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Box sx={{ width: 8, height: 8, borderRadius: 1, bgcolor: item.color }} />
+                        <Typography variant="caption" color="text.secondary">{item.label}</Typography>
+                      </Box>
+                    ))}
+                  </Box>
                   <Box sx={{ px: 3, py: 1.5, borderTop: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="caption" color="text.secondary">Total detections</Typography>
-                    <Chip label={`${detections.length} objects`} size="small" sx={{ fontWeight: 700, fontSize: '0.68rem', height: 20, bgcolor: alpha('#00bcd4', 0.08), color: '#00bcd4' }} />
+                    <Chip label={`${totalDetections} objects`} size="small" sx={{ fontWeight: 700, fontSize: '0.68rem', height: 20, bgcolor: alpha('#00bcd4', 0.08), color: '#00bcd4' }} />
                   </Box>
                 </Paper>
               </Grid>
