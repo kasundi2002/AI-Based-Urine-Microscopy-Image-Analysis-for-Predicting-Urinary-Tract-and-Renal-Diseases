@@ -133,30 +133,80 @@ const PatientPortal = () => {
   };
 
   const generateRiskPrediction = (q, r) => {
-    let score = 15;
-    if (q.painLevel && parseInt(q.painLevel) > 5) score += 15;
-    if (q.painLevel && parseInt(q.painLevel) > 7) score += 10;
-    if (q.history === 'yes') score += 12;
-    if (q.hydration === 'low') score += 10;
-    if (q.diet === 'high_salt' || q.diet === 'high_oxalate') score += 8;
-    if (q.urinaryFrequency === 'frequent') score += 7;
-    if (q.bloodInUrine === 'yes') score += 15;
-    if (q.burning === 'yes') score += 10;
-    if (q.medication === 'yes') score += 3;
-    if (r?.analysis?.risk_level === 'High') score += 15;
-    else if (r?.analysis?.risk_level === 'Moderate') score += 8;
+    const isYes = (key) => String(q?.[key] || '').toLowerCase() === 'yes';
+    const countYes = (keys) => keys.reduce((n, key) => n + (isYes(key) ? 1 : 0), 0);
+    const waterLow = (q?.q28 || '') === 'Less than 1 liter';
+    const waterMid = (q?.q28 || '') === '1-2 liters';
+
+    const mappings = {
+      uti: ['q4', 'q5', 'q6', 'q10', 'q11', 'q13', 'q14', 'q15', 'q18'],
+      lowerUti: ['q4', 'q5', 'q6', 'q10'],
+      upperUti: ['q11', 'q13', 'q14', 'q15'],
+      yeastUti: ['q4', 'q5', 'q22', 'q26'],
+      kidneyStone: ['q7', 'q11', 'q12', 'q13', 'q14', 'q24', 'q29', 'q30', 'q31'],
+      hematuria: ['q7', 'q8', 'q11', 'q12', 'q18', 'q24', 'q32'],
+      rbcCast: ['q7', 'q8', 'q11'],
+      wbcCast: ['q14', 'q15', 'q18', 'q19'],
+      granularCast: ['q17', 'q9', 'q25', 'q27'],
+      waxyCast: ['q16', 'q20', 'q21', 'q22', 'q17', 'q9'],
+    };
+
+    const age = parseInt(q?.q1, 10) || 0;
+    const lowerUtiScore = countYes(mappings.lowerUti);
+    const upperUtiScore = countYes(mappings.upperUti);
+    const utiScore = countYes(mappings.uti);
+    const yeastUtiScore = countYes(mappings.yeastUti);
+    const kidneyStoneScore = countYes(mappings.kidneyStone) + (waterLow ? 2 : waterMid ? 1 : 0);
+    const hematuriaScore = countYes(mappings.hematuria) + (age >= 50 ? 1 : 0);
+    const castScore =
+      countYes(mappings.rbcCast) +
+      countYes(mappings.wbcCast) +
+      countYes(mappings.granularCast) +
+      countYes(mappings.waxyCast) +
+      (waterLow ? 1 : 0);
+
+    let score = 12;
+    score += utiScore * 2;
+    score += lowerUtiScore >= 3 ? 5 : 0;
+    score += upperUtiScore >= 2 ? 6 : 0;
+    score += yeastUtiScore >= 3 ? 6 : 0;
+    score += kidneyStoneScore * 2;
+    score += hematuriaScore * 2;
+    score += Math.round(castScore * 1.5);
+
+    if (age >= 60) score += 8;
+    else if (age >= 45) score += 4;
+
+    if (isYes('q33')) score += 3;
+    if (r?.analysis?.risk_level === 'High') score += 12;
+    else if (r?.analysis?.risk_level === 'Moderate') score += 6;
+
     if (r?.chemicalParameters) {
       const c = r.chemicalParameters;
-      if (c.protein && c.protein !== 'Nil') score += 8;
-      if (c.glucose && c.glucose !== 'Nil') score += 5;
-      if (c.blood && c.blood !== 'Nil') score += 10;
-      if (c.nitrite === 'Positive') score += 8;
+      if (c.protein && c.protein !== 'Nil') score += 6;
+      if (c.glucose && c.glucose !== 'Nil') score += 4;
+      if (c.blood && c.blood !== 'Nil') score += 8;
+      if (c.nitrite === 'Positive') score += 7;
     }
-    score = Math.min(score, 95);
-    let label = score > 60 ? 'High Risk - Immediate Consultation Recommended'
-      : score > 40 ? 'Moderate Risk - Follow-up Advised'
-      : score > 25 ? 'Low-Moderate Risk - Monitor Regularly'
-      : 'Low Risk - Healthy Status';
+
+    score = Math.max(5, Math.min(score, 95));
+
+    const dominantPattern = (() => {
+      const items = [
+        { key: 'UTI', value: utiScore + upperUtiScore },
+        { key: 'Kidney Stone', value: kidneyStoneScore },
+        { key: 'Hematuria/RBC', value: hematuriaScore },
+        { key: 'Kidney Cast Disease', value: castScore },
+      ];
+      items.sort((a, b) => b.value - a.value);
+      return items[0].value > 0 ? items[0].key : 'General Urinary';
+    })();
+
+    let label = 'Low Risk - Monitor and stay hydrated';
+    if (score > 60) label = `High Risk - ${dominantPattern} pattern, immediate consultation recommended`;
+    else if (score > 40) label = `Moderate Risk - ${dominantPattern} pattern, follow-up advised`;
+    else if (score > 25) label = `Low-Moderate Risk - ${dominantPattern} pattern, monitor closely`;
+
     return { riskScore: score, riskLabel: label };
   };
 
@@ -283,7 +333,7 @@ const PatientPortal = () => {
                   </Box>
                   <Box>
                     <Typography variant="subtitle2" fontWeight={700}>Enhance Your Risk Prediction!</Typography>
-                    <Typography variant="caption" color="text.secondary">Complete the Health Questionnaire for a personalized AI kidney stone risk prediction.</Typography>
+                    <Typography variant="caption" color="text.secondary">Complete the Health Questionnaire for personalized UTI, kidney stone, hematuria, and kidney disease risk scoring.</Typography>
                   </Box>
                 </Box>
                 <Button variant="contained" size="small" startIcon={<BiotechIcon />} onClick={() => setShowQuestionnaire(true)}
