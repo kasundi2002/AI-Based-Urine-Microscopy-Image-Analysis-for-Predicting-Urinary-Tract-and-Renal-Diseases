@@ -30,7 +30,16 @@ const reportSchema = new mongoose.Schema({
         default: 'Pending Verification'
     },
     verifiedAt: Date,
-    comments: String
+    comments: String,
+    questionnaireAnswers: {
+        type: mongoose.Schema.Types.Mixed
+    },
+    riskPrediction: {
+        diagnosisScore: Number,
+        questionnaireScore: Number,
+        finalScore: Number,
+        riskLevel: String
+    }
 }, {
     timestamps: true
 });

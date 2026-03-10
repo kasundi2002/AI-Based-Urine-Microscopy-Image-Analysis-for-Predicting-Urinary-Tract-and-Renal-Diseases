@@ -142,6 +142,17 @@ export const api = {
         return data.data;
     },
 
+    submitQuestionnaire: async (reportId, answers) => {
+        const response = await fetch(`${BACKEND_URL}/reports/questionnaire`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ reportId, answers })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to submit questionnaire');
+        return data.data;
+    },
+
     sendAccessLink: async (patientId) => {
         const response = await fetch(`${BACKEND_URL}/patient-access/send-link`, {
             method: 'POST',
