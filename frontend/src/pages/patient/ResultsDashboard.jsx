@@ -11,6 +11,8 @@ import ShieldIcon from '@mui/icons-material/Shield';
 import BloodtypeIcon from '@mui/icons-material/Bloodtype';
 import DiamondIcon from '@mui/icons-material/Diamond';
 import BugReportIcon from '@mui/icons-material/BugReport';
+import BiotechIcon from '@mui/icons-material/Biotech';
+import ScienceIcon from '@mui/icons-material/Science';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
@@ -50,7 +52,9 @@ const ResultsDashboard = ({ report, patientName }) => {
     { label: 'WBC', value: report.wbc || '0-2', unit: '/hpf', color: '#00bcd4', icon: <ShieldIcon /> },
     { label: 'RBC', value: report.rbc || '0-1', unit: '/hpf', color: '#ef5350', icon: <BloodtypeIcon /> },
     { label: 'Crystals', value: report.crystals || 'None', unit: '', color: '#ff9100', icon: <DiamondIcon /> },
-    { label: 'Bacteria', value: report.bacteria || 'None', unit: '', color: '#66bb6a', icon: <BugReportIcon /> }
+    { label: 'Casts', value: report.casts || '0', unit: '', color: '#66bb6a', icon: <BiotechIcon /> },
+    { label: 'Yeast', value: report.yeast || '0', unit: '', color: '#ff9800', icon: <BugReportIcon /> },
+    { label: 'Bacteria', value: report.bacteria || 'None', unit: '', color: '#9c27b0', icon: <ScienceIcon /> },
   ];
 
   const lifestyle = [

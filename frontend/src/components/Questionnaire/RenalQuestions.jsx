@@ -1,5 +1,7 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import ScienceIcon from '@mui/icons-material/Science';
 import { QuestionBlock, YES_NO } from './QuestionUtils';
 
 const QUESTIONS = [
@@ -16,7 +18,23 @@ const QUESTIONS = [
 export const RenalQuestions = ({ answers, handleAnswerChange }) => {
     return (
         <Box>
-            <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>Renal Disease Assessment</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                <Box sx={{
+                    p: 1, borderRadius: 2,
+                    background: 'linear-gradient(135deg, #7c4dff, #651fff)',
+                    color: 'white', display: 'flex',
+                }}>
+                    <ScienceIcon sx={{ fontSize: 22 }} />
+                </Box>
+                <Box>
+                    <Typography variant="h6" fontWeight={800} sx={{ lineHeight: 1.2, color: '#0f172a' }}>
+                        Renal Disease Assessment
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                        Kidney function symptoms and medical history
+                    </Typography>
+                </Box>
+            </Box>
             <QuestionBlock questions={QUESTIONS} answers={answers} handleAnswerChange={handleAnswerChange} />
         </Box>
     );

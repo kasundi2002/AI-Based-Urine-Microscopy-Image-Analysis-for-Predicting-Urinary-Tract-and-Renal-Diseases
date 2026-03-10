@@ -203,6 +203,8 @@ const PatientPortal = () => {
     { label: 'RBC', value: `${rbcCount}`, unit: '/hpf', color: '#ef5350', icon: <BloodtypeIcon /> },
     { label: 'Crystals', value: `${crystalCount}`, unit: '', color: '#ff9100', icon: <DiamondIcon /> },
     { label: 'Casts', value: `${castCount}`, unit: '', color: '#66bb6a', icon: <BiotechIcon /> },
+    { label: 'Yeast', value: `${yeastCount}`, unit: '', color: '#ff9800', icon: <BugReportIcon /> },
+    { label: 'Bacteria', value: `${bacteriaCount}`, unit: '', color: '#9c27b0', icon: <ScienceIcon /> },
   ];
 
   // Build PDF-compatible report object
