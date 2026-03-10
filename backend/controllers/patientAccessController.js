@@ -2,8 +2,8 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import Patient from '../models/Patient.js';
 import Report from '../models/Report.js';
-import { sendAccessEmail } from '../utils/emailService.js';
-import { generateOTP, sendOTP } from '../utils/otpService.js';
+import { sendAccessEmail, sendOtpEmail } from '../utils/emailService.js';
+import { generateOTP } from '../utils/otpService.js';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -194,12 +194,12 @@ export const verifyIdentity = async (req, res, next) => {
         patient.otpExpiry = new Date(Date.now() + otpExpireMinutes * 60 * 1000);
         await patient.save();
 
-        // Mock send OTP via SMS
-        await sendOTP(patient.mobile, otp);
+        // Send OTP via Email
+        await sendOtpEmail(patient.email, patient.name || 'Patient', otp);
 
         res.status(200).json({
             success: true,
-            message: `OTP sent to your registered mobile number ending in ${patient.mobile.slice(-3)}`
+            message: `OTP sent to your registered email address`
         });
     } catch (error) {
         next(error);

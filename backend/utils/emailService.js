@@ -213,3 +213,38 @@ export const sendAccessEmail = async (patient, token, report = null) => {
 
     return info;
 };
+
+export const sendOtpEmail = async (email, patientName, otp) => {
+    const transporter = await createTransport();
+    const mailOptions = {
+        from: `"UroAI Lab System" <${process.env.SMTP_USER || 'noreply@uroai.com'}>`,
+        to: email,
+        subject: 'Your UroAI Verification Code',
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 640px; margin: auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+                <div style="background: linear-gradient(135deg, #0f172a, #1e3a5f); padding: 28px 32px; text-align: center;">
+                    <h1 style="color: white; margin: 0; font-size: 22px;">UroAI Diagnostics</h1>
+                </div>
+                <div style="padding: 28px 32px;">
+                    <p style="color: #333; font-size: 15px;">Dear <strong>${patientName}</strong>,</p>
+                    <p style="color: #475569; font-size: 14px;">Your One-Time Password (OTP) for verifying your identity is:</p>
+                    <div style="text-align: center; margin: 26px 0;">
+                        <span style="font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #00bcd4; background: #f8fafc; padding: 10px 20px; border-radius: 6px; border: 1px dashed #00bcd4;">${otp}</span>
+                    </div>
+                    <p style="color: #64748b; font-size: 12px;">This code is valid for 10 minutes. Do not share it with anyone.</p>
+                </div>
+            </div>
+        `
+    };
+    const info = await transporter.sendMail(mailOptions);
+    if (process.env.NODE_ENV !== 'production') {
+        const previewUrl = nodemailer.getTestMessageUrl(info);
+        console.log('\\n========================================');
+        console.log('OTP EMAIL SENT');
+        console.log(`    To: ${email}`);
+        console.log(`    OTP: ${otp}`);
+        if (previewUrl) console.log(`    Preview URL: ${previewUrl}`);
+        console.log('========================================\\n');
+    }
+    return info;
+};

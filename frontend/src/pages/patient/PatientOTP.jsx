@@ -3,7 +3,7 @@ import { Box, Paper, Typography, TextField, Button, CircularProgress, Alert, Ste
 import { alpha } from '@mui/material/styles';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
+import EmailIcon from '@mui/icons-material/Email';
 import LockIcon from '@mui/icons-material/Lock';
 import SecurityIcon from '@mui/icons-material/Security';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
@@ -153,14 +153,14 @@ const PatientOTP = () => {
           <Box sx={{ px: 4, pt: 4, pb: 3, borderBottom: '1px solid', borderColor: alpha('#fff', 0.08) }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Box sx={{ p: 1, borderRadius: 2, bgcolor: alpha('#00bcd4', 0.15), display: 'flex' }}>
-                <PhoneAndroidIcon sx={{ fontSize: 22, color: '#00bcd4' }} />
+                <EmailIcon sx={{ fontSize: 22, color: '#00bcd4' }} />
               </Box>
               <Box>
                 <Typography variant="h6" fontWeight={700} color="white">
                   Enter Your OTP
                 </Typography>
                 <Typography variant="caption" sx={{ color: alpha('#fff', 0.5) }}>
-                  A 6-digit code was sent to your registered mobile number
+                  A 6-digit code was sent to your registered email address
                 </Typography>
               </Box>
             </Box>
@@ -176,7 +176,7 @@ const PatientOTP = () => {
               )}
 
               <Typography variant="body2" sx={{ color: alpha('#fff', 0.6), mb: 3.5, lineHeight: 1.6, textAlign: 'center' }}>
-                Please enter the 6-digit One-Time Password sent to your mobile number. This code expires in{' '}
+                Please enter the 6-digit One-Time Password sent to your email address. This code expires in{' '}
                 <span style={{ color: '#00bcd4', fontWeight: 700 }}>10 minutes</span>.
               </Typography>
 
