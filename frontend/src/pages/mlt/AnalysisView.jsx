@@ -289,7 +289,8 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
   const handleSubmitReport = async () => {
     try {
       if (patient?._id) {
-        const relativeImageUrl = image ? image.replace('http://localhost:5000', '') : '';
+        const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+        const relativeImageUrl = image ? image.replace(API_BASE, '') : '';
         await api.submitReport({
           patientId: patient._id,
           imageUrl: relativeImageUrl,

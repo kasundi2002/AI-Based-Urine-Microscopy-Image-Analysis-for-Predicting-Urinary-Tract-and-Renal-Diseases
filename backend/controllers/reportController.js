@@ -120,7 +120,8 @@ export const uploadImage = async (req, res, next) => {
 
         let mlResponse;
         try {
-            mlResponse = await axios.post('http://localhost:8000/analyze-image', formData, {
+            const ML_CORE_URL = process.env.ML_CORE_URL || 'http://localhost:8000';
+            mlResponse = await axios.post(`${ML_CORE_URL}/analyze-image`, formData, {
                 headers: {
                     ...formData.getHeaders()
                 }
@@ -327,8 +328,9 @@ export const submitQuestionnaire = async (req, res, next) => {
                     questionnaire_answers: clinicalPayload
                 };
 
+                const ML_CORE_URL = process.env.ML_CORE_URL || 'http://localhost:8000';
                 const utiAnalysis = await axios.post(
-                    'http://localhost:8000/analyze-uti',
+                    `${ML_CORE_URL}/analyze-uti`,
                     utiPayload,
                     { headers: { 'Content-Type': 'application/json' } }
                 );

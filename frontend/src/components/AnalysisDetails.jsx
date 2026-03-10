@@ -117,7 +117,8 @@ const AnalysisDetails = ({ report }) => {
     const abnormalCount = particlesList.filter(p => p.isAbnormal).length;
 
     // ── Image ────────────────────────────────────────────────────────────────
-    const imageUrl = report?.imageUrl ? `http://localhost:5000${report.imageUrl}` : null;
+    const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    const imageUrl = report?.imageUrl ? `${API_BASE}${report.imageUrl}` : null;
 
     // ── Questionnaire ────────────────────────────────────────────────────────
     const questionnaireMap = report?.clinicalData?.raw || {};

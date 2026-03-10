@@ -87,7 +87,8 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
             const reports = await api.getReportsByPatient(preSelectedPatient._id);
             if (reports && reports.length > 0) {
               const latestReport = reports[0]; // Already sorted by createdAt desc
-              const fullImageUrl = latestReport.imageUrl ? `http://localhost:5000${latestReport.imageUrl}` : null;
+              const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+              const fullImageUrl = latestReport.imageUrl ? `${API_BASE}${latestReport.imageUrl}` : null;
               setUploadedImage(fullImageUrl);
               setAnalysisResult(latestReport.analysis);
               if (latestReport.chemicalParameters) {
@@ -165,7 +166,8 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
       const result = await api.uploadImage(file, selectedPatient?._id);
 
       // result holds the mongodb document (with imageUrl and analysis object)
-      const fullImageUrl = `http://localhost:5000${result.imageUrl}`;
+      const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+      const fullImageUrl = `${API_BASE}${result.imageUrl}`;
 
       setUploadedImage(fullImageUrl);
       setAnalysisResult(result.analysis);

@@ -174,7 +174,8 @@ const Questionnaire = ({ onComplete, patientDetails, reportId, routing }) => {
       try {
         if (reportId) {
           const token = localStorage.getItem('patientToken') || localStorage.getItem('token');
-          await fetch(`http://localhost:5000/api/reports/${reportId}/submit-questionnaire`, {
+          const baseUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+          await fetch(`${baseUrl}/api/reports/${reportId}/submit-questionnaire`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

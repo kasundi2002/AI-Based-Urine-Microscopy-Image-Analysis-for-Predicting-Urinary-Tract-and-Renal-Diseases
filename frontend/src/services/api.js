@@ -8,7 +8,7 @@ const MOCK_USERS = [
     { id: 'pat-1', username: 'pat_user', password: 'password', role: 'PATIENT', name: 'John Doe' },
 ];
 
-const BACKEND_URL = 'http://localhost:5000/api';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ? `${import.meta.env.VITE_BACKEND_URL}/api` : 'http://localhost:5000/api';
 
 const getAuthHeaders = () => {
     const token = localStorage.getItem('token');

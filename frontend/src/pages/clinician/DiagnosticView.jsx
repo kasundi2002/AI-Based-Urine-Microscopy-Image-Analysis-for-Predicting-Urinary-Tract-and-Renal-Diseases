@@ -30,7 +30,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import microscopyImage from '../../assets/c2.jpg';
 import { api } from '../../services/api';
 
-const BACKEND_BASE = 'http://localhost:5000';
+const BACKEND_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
 const ImageContainer = styled(Box)(() => ({
   position: 'relative',

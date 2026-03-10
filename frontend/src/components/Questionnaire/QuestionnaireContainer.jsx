@@ -73,7 +73,8 @@ export const QuestionnaireContainer = ({ reportId, onComplete, patientDetails, r
             try {
                 if (reportId) {
                     const token = localStorage.getItem('patientToken') || localStorage.getItem('token');
-                    const res = await fetch(`http://localhost:5000/api/reports/${reportId}/submit-questionnaire`, {
+                    const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+                    const res = await fetch(`${API_BASE}/api/reports/${reportId}/submit-questionnaire`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

@@ -32,7 +32,7 @@ import generateReport from '../../utils/generateReport';
 import { api } from '../../services/api';
 import AnalysisDetails from '../../components/AnalysisDetails';
 
-const BACKEND_URL = 'http://localhost:5000/api';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ? `${import.meta.env.VITE_BACKEND_URL}/api` : 'http://localhost:5000/api';
 
 const PatientPortal = () => {
   const navigate = useNavigate();
@@ -172,7 +172,8 @@ const PatientPortal = () => {
       : 'linear-gradient(135deg, #66bb6a, #2e7d32)';
 
   const reportDate = report ? new Date(report.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
-  const imageUrl = report?.imageUrl ? `http://localhost:5000${report.imageUrl}` : '';
+  const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+  const imageUrl = report?.imageUrl ? `${API_BASE}${report.imageUrl}` : '';
   const verification = report?.verification || null;
   const doctorPrescription = verification?.prescription || '';
   const doctorNotes = verification?.clinicalNotes || report?.comments || '';
