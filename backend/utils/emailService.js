@@ -40,70 +40,15 @@ const formatDateTime = (value) => {
     });
 };
 
-const getMicroscopySummary = (report) => {
-    const counts = { wbc: 0, rbc: 0, crystals: 0, bacteria: 0 };
-    const detections = Array.isArray(report?.analysis?.detections)
-        ? report.analysis.detections
-        : [];
-
-    detections.forEach((item) => {
-        const rawClass = item?.class_name || item?.class || '';
-        const cls = String(rawClass).toLowerCase();
-        if (cls.includes('wbc') || cls.includes('leuko')) counts.wbc += 1;
-        if (cls.includes('rbc') || cls.includes('eryth')) counts.rbc += 1;
-        if (cls.includes('crystal') || cls.includes('cryst')) counts.crystals += 1;
-        if (cls.includes('bacteria') || cls.includes('bacter') || cls.includes('bacilli') || cls.includes('cocci')) counts.bacteria += 1;
-    });
-
-    return counts;
-};
-
-const getChemicalFlags = (chemicalParameters) => {
-    if (!chemicalParameters) return [];
-
-    const flags = [];
-    const maybePush = (label, value, abnormal) => {
-        if (value === undefined || value === null || value === '') return;
-        if (abnormal) flags.push(`${label}: ${value}`);
-    };
-
-    maybePush('Protein', chemicalParameters.protein, chemicalParameters.protein !== 'Nil');
-    maybePush('Glucose', chemicalParameters.glucose, chemicalParameters.glucose !== 'Nil');
-    maybePush('Ketone Bodies', chemicalParameters.ketoneBodies, chemicalParameters.ketoneBodies !== 'Nil');
-    maybePush('Bilirubin', chemicalParameters.bilirubin, chemicalParameters.bilirubin !== 'Nil');
-    maybePush('Blood (Occult)', chemicalParameters.blood, chemicalParameters.blood !== 'Nil');
-    maybePush('Nitrite', chemicalParameters.nitrite, chemicalParameters.nitrite === 'Positive');
-    maybePush('Urobilinogen', chemicalParameters.urobilinogen, chemicalParameters.urobilinogen === 'Elevated');
-
-    return flags.slice(0, 4);
-};
-
 const buildClinicalSummaryHtml = (patient, report) => {
     const reportDate = formatDateTime(report?.createdAt);
     const riskLevel = report?.analysis?.risk_level || patient?.riskAssessment || 'Pending';
-    const microscopy = getMicroscopySummary(report);
-    const chemicalFlags = getChemicalFlags(report?.chemicalParameters);
-
-    const findings = [
-        `WBC: ${microscopy.wbc} /hpf`,
-        `RBC: ${microscopy.rbc} /hpf`,
-        `Crystals: ${microscopy.crystals}`,
-        `Bacteria: ${microscopy.bacteria}`
-    ];
-
-    if (chemicalFlags.length > 0) {
-        findings.push(...chemicalFlags);
-    }
-
-    const findingList = findings
-        .map((item) => `<li style="margin: 0 0 6px 0;">${item}</li>`)
-        .join('');
 
     return `
         <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-top: 18px;">
             <tr>
                 <td style="padding: 10px 12px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; font-size: 12px; font-weight: 700; color: #0f172a;">Clinical Summary</td>
-                <td style="padding: 10px 12px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 12px; color: #334155;">Urine Routine / Microscopy & Chemical Analysis</td>
+                <td style="padding: 10px 12px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; text-align: right; font-size: 12px; color: #334155;">Urine Routine / Microscopy &amp; Chemical Analysis</td>
             </tr>
             <tr>
                 <td style="padding: 10px 12px; font-size: 12px; color: #334155; width: 50%;">Patient: <strong>${patient.name}</strong><br/>Patient ID: <strong>${patient.patientId}</strong></td>
@@ -112,14 +57,6 @@ const buildClinicalSummaryHtml = (patient, report) => {
             <tr>
                 <td colspan="2" style="padding: 10px 12px; font-size: 12px; color: #334155; border-top: 1px solid #e5e7eb;">
                     Overall Impression: <strong>${riskLevel}</strong> risk pattern based on available urine findings.
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2" style="padding: 10px 12px; font-size: 12px; color: #334155; border-top: 1px solid #e5e7eb;">
-                    <div style="font-weight: 700; margin-bottom: 6px; color: #0f172a;">Key Findings</div>
-                    <ul style="margin: 0; padding-left: 18px; color: #475569;">
-                        ${findingList}
-                    </ul>
                 </td>
             </tr>
         </table>
