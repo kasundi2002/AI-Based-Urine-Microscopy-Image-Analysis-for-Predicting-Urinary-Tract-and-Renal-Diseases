@@ -52,8 +52,8 @@ const FIELD_CONFIG = [
   { key: 'blood', label: 'Blood (Occult)', type: 'select', icon: <OpacityIcon sx={{ fontSize: 16 }} /> },
 ];
 
-const ChemicalParametersForm = ({ patient, onSubmit, onBack }) => {
-  const [values, setValues] = useState(INITIAL_VALUES);
+const ChemicalParametersForm = ({ patient, onSubmit, onBack, initialData }) => {
+  const [values, setValues] = useState({ ...INITIAL_VALUES, ...initialData });
   const [errors, setErrors] = useState({});
 
   const handleChange = (key) => (e) => {

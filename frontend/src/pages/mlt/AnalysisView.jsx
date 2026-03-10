@@ -376,7 +376,7 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
           >
             Re-Analyze
           </Button>
-          {onAddChemicalParams && !chemicalParameters && (
+          {onAddChemicalParams && (
             <Button
               variant="outlined"
               startIcon={<ScienceIcon />}
@@ -391,7 +391,7 @@ const AnalysisView = ({ image, analysis, chemicalParameters, patient, onNewAnaly
                 '&:hover': { borderColor: '#4caf50', bgcolor: alpha('#4caf50', 0.04) }
               }}
             >
-              Add Chemical Params
+              {chemicalParameters ? 'Edit Chemical Params' : 'Add Chemical Params'}
             </Button>
           )}
           <Button
