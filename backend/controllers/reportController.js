@@ -389,3 +389,30 @@ export const submitQuestionnaire = async (req, res, next) => {
         next(error);
     }
 };
+
+// @desc    Update chemical parameters for the latest report of a patient
+// @route   PUT /api/reports/patient/:patientId/chemical
+// @access  Private (MLT)
+export const updateChemicalParametersByPatient = async (req, res, next) => {
+    try {
+        const { patientId } = req.params;
+        const { chemicalParameters } = req.body;
+
+        if (!chemicalParameters) {
+            return res.status(400).json({ success: false, error: 'Missing chemical parameters' });
+        }
+
+        const report = await Report.findOne({ patientId }).sort({ createdAt: -1 });
+
+        if (!report) {
+            return res.status(404).json({ success: false, error: 'No report found for this patient' });
+        }
+
+        report.chemicalParameters = chemicalParameters;
+        await report.save();
+
+        res.status(200).json({ success: true, data: report });
+    } catch (error) {
+        next(error);
+    }
+};

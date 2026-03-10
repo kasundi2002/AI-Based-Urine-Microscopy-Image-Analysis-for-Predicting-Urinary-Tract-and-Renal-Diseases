@@ -183,13 +183,24 @@ const AnalysisWorkflow = ({ preSelectedPatient }) => {
   const activeStep = chemicalParameters ? 3 : analysisResult ? 2 : selectedPatient ? 1 : 0;
 
   // Render Chemical Parameters Form (optional step, triggered from AnalysisView)
-  if (analysisResult && uploadedImage && showChemForm && !chemicalParameters) {
+  if (analysisResult && uploadedImage && showChemForm) {
     return (
       <Box sx={{ animation: 'fadeIn 0.4s ease-out' }}>
         <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
         <ChemicalParametersForm
+          initialData={chemicalParameters}
           patient={selectedPatient}
-          onSubmit={(params) => { setChemicalParameters(params); setShowChemForm(false); }}
+          onSubmit={async (params) => { 
+            if (selectedPatient?.status === 'Ready for Review' || selectedPatient?.status === 'Completed') {
+              try {
+                await api.updateChemicalParametersByPatient(selectedPatient._id, params);
+              } catch (e) {
+                console.error("Failed to update chemical params:", e);
+              }
+            }
+            setChemicalParameters(params); 
+            setShowChemForm(false); 
+          }}
           onBack={() => setShowChemForm(false)}
         />
       </Box>

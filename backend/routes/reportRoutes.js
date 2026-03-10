@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
-import { getReports, uploadImage, getReport, verifyReport, submitReport, submitQuestionnaire } from '../controllers/reportController.js';
+import { getReports, uploadImage, getReport, verifyReport, submitReport, submitQuestionnaire, updateChemicalParametersByPatient } from '../controllers/reportController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 import { protectPatient } from '../middleware/patientAuthMiddleware.js';
 
@@ -58,5 +58,8 @@ router.route('/:id/verify')
 
 router.route('/:id/submit-questionnaire')
     .post(protectPatient, submitQuestionnaire);
+
+router.route('/patient/:patientId/chemical')
+    .put(protect, authorize('MLT'), updateChemicalParametersByPatient);
 
 export default router;

@@ -104,6 +104,17 @@ export const api = {
         return data.data;
     },
 
+    updateChemicalParametersByPatient: async (patientId, chemicalParameters) => {
+        const response = await fetch(`${BACKEND_URL}/reports/patient/${patientId}/chemical`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ chemicalParameters })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to update chemical parameters');
+        return data.data;
+    },
+
     getReportsByPatient: async (patientId) => {
         const response = await fetch(`${BACKEND_URL}/reports?patientId=${patientId}`, {
             headers: getAuthHeaders()
