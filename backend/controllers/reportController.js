@@ -4,7 +4,14 @@ import ClinicalVerification from '../models/ClinicalVerification.js';
 import fs from 'fs';
 import axios from 'axios';
 import FormData from 'form-data';
-import { calculateFinalRisk, getQuestionsForDiagnosis, generateRiskExplanation } from '../services/clinicalRiskEngine.js';
+import {
+    calculateFinalRisk,
+    calculateDiagnosisRisk,
+    getQuestionsForDiagnosis,
+    generateRiskExplanation,
+    shouldRunUTIML,
+    mapUTIMLToRisk
+} from '../services/clinicalRiskEngine.js';
 import { getDiagnosisCategories } from '../config/diagnosisCategories.js';
 const toNumber = (value) => {
     const parsed = Number(value);
@@ -298,22 +305,33 @@ export const submitQuestionnaire = async (req, res, next) => {
 
         const diagnoses = report.analysis?.diagnosis?.diagnoses || [];
         const categories = getDiagnosisCategories(diagnoses);
-        const requiresUTIPipeline = categories.includes('infection');
-
         const clinicalPayload = buildClinicalPayload(questionnaireData);
         let updatedAnalysis = report.analysis || {};
         let utiMLResult = null;
 
-        if (requiresUTIPipeline) {
+        // ── DIAGNOSIS ROUTER ─────────────────────────────────────────
+        const runUTI = shouldRunUTIML(diagnoses);
+        let finalRiskScore, riskLevel, riskSource;
+        let baseDiagnosisScore = calculateDiagnosisRisk(diagnoses);
+        let questionnaireScore = null;
+
+        if (runUTI) {
+            // ── PATHWAY 1 — UTI ML ──────────────────────────────────
+            console.log('[DiagnosisRouter] Routing to UTI ML Pipeline');
+            riskSource = 'UTI_ML';
+
             try {
-                const reqPayload = {
-                    particle_features: report.analysis?.particles || {},
+                // STEP 4: Send ONLY questionnaire metadata — no particle counts
+                const utiPayload = {
+                    particle_features: {},   // empty – ML uses questionnaire only
                     questionnaire_answers: clinicalPayload
                 };
 
-                const utiAnalysis = await axios.post('http://localhost:8000/analyze-uti', reqPayload, {
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                const utiAnalysis = await axios.post(
+                    'http://localhost:8000/analyze-uti',
+                    utiPayload,
+                    { headers: { 'Content-Type': 'application/json' } }
+                );
 
                 utiMLResult = {
                     clinical_dataset1: utiAnalysis.data?.clinical_dataset1 || null,
@@ -322,24 +340,47 @@ export const submitQuestionnaire = async (req, res, next) => {
                     uti_rules: utiAnalysis.data?.uti_rules || null
                 };
 
-                updatedAnalysis = {
-                    ...(report.analysis || {}),
-                    ...utiMLResult
-                };
+                updatedAnalysis = { ...updatedAnalysis, ...utiMLResult };
+
+                // Map ML output → standardised risk score
+                const utiRisk = mapUTIMLToRisk(utiMLResult, baseDiagnosisScore);
+                finalRiskScore = utiRisk.finalScore;
+                riskLevel = utiRisk.riskLevel;
+
+                console.log('[DiagnosisRouter] UTI ML finalScore:', finalRiskScore);
+                console.log('[DiagnosisRouter] UTI ML riskLevel:', riskLevel);
             } catch (error) {
-                console.error('UTI Clinical Analysis Error:', error.message);
+                console.error('[DiagnosisRouter] UTI ML Pipeline Error:', error.message);
+                // Fallback to rule engine if ML service is unreachable
+                console.log('[DiagnosisRouter] Falling back to Rule Engine');
+                riskSource = 'RULE_ENGINE';
+                const ruleRisk = calculateFinalRisk(diagnoses, questionnaireData);
+                finalRiskScore = ruleRisk.finalScore;
+                riskLevel = ruleRisk.riskLevel;
+                questionnaireScore = ruleRisk.questionnaireScore;
+                baseDiagnosisScore = ruleRisk.baseDiagnosisScore;
             }
+        } else {
+            // ── PATHWAY 2 — RULE ENGINE ─────────────────────────────
+            console.log('[DiagnosisRouter] Routing to Rule-Based Engine');
+            riskSource = 'RULE_ENGINE';
+
+            const ruleRisk = calculateFinalRisk(diagnoses, questionnaireData);
+            finalRiskScore = ruleRisk.finalScore;
+            riskLevel = ruleRisk.riskLevel;
+            questionnaireScore = ruleRisk.questionnaireScore;
+            baseDiagnosisScore = ruleRisk.baseDiagnosisScore;
+
+            console.log('[DiagnosisRouter] Rule Engine finalScore:', finalRiskScore);
+            console.log('[DiagnosisRouter] Rule Engine riskLevel:', riskLevel);
         }
+        // ── END ROUTER ───────────────────────────────────────────────
 
-        // Calculate unified disease risk
-        const riskResult = calculateFinalRisk(diagnoses, questionnaireData);
-
-        console.log("[submitQuestionnaire] Base Diagnosis Score:", riskResult.baseDiagnosisScore);
-        console.log("[submitQuestionnaire] Questionnaire Score:", riskResult.questionnaireScore);
-        console.log("[submitQuestionnaire] Final Score:", riskResult.finalScore);
-        console.log("[submitQuestionnaire] Risk Level:", riskResult.riskLevel);
-
-        const explanations = ["Centralized risk engine computed combined medical history and laboratory state."];
+        const explanations = [
+            riskSource === 'UTI_ML'
+                ? 'Risk computed by the AI Infection (UTI) Machine Learning model.'
+                : 'Centralized risk engine computed combined medical history and laboratory state.'
+        ];
         const riskExplanation = generateRiskExplanation(diagnoses, report.analysis?.particles, questionnaireData);
 
         const finalReportResult = {
@@ -347,12 +388,18 @@ export const submitQuestionnaire = async (req, res, next) => {
             detectedCategories: categories,
             derivedRisks: {
                 combinedRisk: {
-                    riskLevel: riskResult.riskLevel,
-                    score: riskResult.finalScore,
-                    baseDiagnosisScore: riskResult.baseDiagnosisScore,
-                    questionnaireScore: riskResult.questionnaireScore
+                    riskLevel,
+                    score: finalRiskScore,
+                    baseDiagnosisScore,
+                    questionnaireScore
                 }
             },
+            // STEP 5 — required fields
+            finalRiskScore,
+            riskLevel,
+            riskSource,
+            baseDiagnosisScore,
+            questionnaireScore,
             utiMLResult,
             explanations,
             riskExplanation,
@@ -371,20 +418,14 @@ export const submitQuestionnaire = async (req, res, next) => {
                 riskPrediction: finalReportResult,
                 status: 'Pending Verification'
             },
-            {
-                new: true,
-                runValidators: true
-            }
+            { new: true, runValidators: true }
         );
 
-        // Optionally send final report back exactly as requested
-        const finalResponse = {
+        res.status(200).json({
             success: true,
             data: report,
-            report: finalReportResult // Explicitly placing it in response too
-        };
-
-        res.status(200).json(finalResponse);
+            report: finalReportResult
+        });
     } catch (error) {
         next(error);
     }

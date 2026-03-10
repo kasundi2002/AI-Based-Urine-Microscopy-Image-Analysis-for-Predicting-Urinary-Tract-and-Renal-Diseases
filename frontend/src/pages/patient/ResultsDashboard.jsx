@@ -30,6 +30,7 @@ const ResultsDashboard = ({ report, patientName }) => {
 
   const backendRisk = report.riskPrediction?.derivedRisks?.combinedRisk;
   const riskScore = backendRisk?.score !== undefined ? backendRisk.score : report.riskScore;
+  const riskSource = report.riskPrediction?.riskSource || null;
   const isHighRisk = riskScore > 50;
 
   const riskGradient = isHighRisk
@@ -57,6 +58,13 @@ const ResultsDashboard = ({ report, patientName }) => {
     { icon: <RestaurantIcon />, text: 'Reduce sodium intake (salt)', color: '#ff9100' },
     { icon: <FitnessCenterIcon />, text: 'Limit oxalate-rich foods', color: '#7c4dff' },
   ];
+
+  // Determine the risk-source label and styling
+  const riskSourceConfig = riskSource === 'UTI_ML'
+    ? { label: '🧠 AI Infection Model Used', bgColor: 'rgba(156,39,176,0.18)', textColor: '#ce93d8' }
+    : riskSource === 'RULE_ENGINE'
+      ? { label: '📊 Rule-Based Clinical Risk Model', bgColor: 'rgba(0,188,212,0.18)', textColor: '#80deea' }
+      : null;
 
   return (
     <Box>
@@ -152,6 +160,22 @@ const ResultsDashboard = ({ report, patientName }) => {
                     label="AI + Questionnaire"
                     size="small"
                     sx={{ mt: 2, bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600, fontSize: '0.7rem' }}
+                  />
+                )}
+                {riskSourceConfig && (
+                  <Chip
+                    label={riskSourceConfig.label}
+                    size="small"
+                    sx={{
+                      mt: 1.2,
+                      bgcolor: riskSourceConfig.bgColor,
+                      color: riskSourceConfig.textColor,
+                      fontWeight: 700,
+                      fontSize: '0.68rem',
+                      border: '1px solid',
+                      borderColor: riskSourceConfig.textColor,
+                      letterSpacing: 0.3,
+                    }}
                   />
                 )}
                 <Box sx={{ mt: 3 }}>

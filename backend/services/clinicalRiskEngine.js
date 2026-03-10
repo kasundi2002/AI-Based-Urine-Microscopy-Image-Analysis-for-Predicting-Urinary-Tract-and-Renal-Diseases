@@ -1,5 +1,62 @@
 import { getDiagnosisCategories } from '../config/diagnosisCategories.js';
 
+// ── Diagnosis Router ──────────────────────────────────────────────────
+// Infection-related diagnoses that should route to the UTI ML pipeline
+const UTI_DIAGNOSES = [
+    "Urinary Tract Infection",
+    "Severe Bacterial Infection",
+    "Pyelonephritis",
+    "Fungal Infection",
+    "Candiduria",
+    "Infection with Hematuria"
+];
+
+/**
+ * Returns TRUE when at least one diagnosis is infection-related,
+ * meaning the UTI ML pipeline should run instead of the rule engine.
+ */
+export const shouldRunUTIML = (diagnoses = []) => {
+    return diagnoses.some(d =>
+        UTI_DIAGNOSES.includes(typeof d === "string" ? d : d.name)
+    );
+};
+
+/**
+ * Converts UTI ML pipeline output (fusion confidence, uti_type, etc.)
+ * into the same { finalScore, riskLevel, baseDiagnosisScore, questionnaireScore }
+ * shape the rule engine returns so the rest of the system remains consistent.
+ */
+export const mapUTIMLToRisk = (utiMLResult, baseDiagnosisScore = 0) => {
+    const fusion = utiMLResult?.fusion || {};
+    const confidence = fusion.confidence_score ?? 0;
+    const finalUti = fusion.final_uti ?? false;
+
+    // Map ML confidence (0-1) into a 0-100 risk score
+    let finalScore;
+    if (!finalUti) {
+        // ML says no UTI — keep the base diagnosis score only
+        finalScore = Math.max(baseDiagnosisScore, Math.round(confidence * 30));
+    } else {
+        // ML says UTI — scale confidence into the 40-100 range
+        finalScore = Math.round(40 + confidence * 60);
+    }
+    finalScore = Math.min(finalScore, 100);
+
+    let riskLevel = 'Normal';
+    if (finalScore >= 81) riskLevel = 'Critical';
+    else if (finalScore >= 61) riskLevel = 'High';
+    else if (finalScore >= 41) riskLevel = 'Moderate';
+    else if (finalScore >= 21) riskLevel = 'Low';
+
+    return {
+        baseDiagnosisScore,
+        questionnaireScore: null,    // not applicable for ML path
+        finalScore,
+        riskLevel,
+        predicted_risk_level: riskLevel // convenience alias
+    };
+};
+
 export const DIAGNOSIS_QUESTION_MAP = {
     infection: [1, 2, 4, 5, 6, 14, 15, 18, 19, 26, 28, 32],
     hematuria: [1, 2, 4, 7, 8, 10, 24, 25, 32, 33],
