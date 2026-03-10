@@ -1,5 +1,7 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import { QuestionBlock, YES_NO, WATER_OPTIONS } from './QuestionUtils';
 
 const QUESTIONS = [
@@ -17,7 +19,23 @@ const QUESTIONS = [
 export const StoneQuestions = ({ answers, handleAnswerChange }) => {
     return (
         <Box>
-            <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>Kidney Stone Assessment</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                <Box sx={{
+                    p: 1, borderRadius: 2,
+                    background: 'linear-gradient(135deg, #ff9100, #e65100)',
+                    color: 'white', display: 'flex',
+                }}>
+                    <LocalHospitalIcon sx={{ fontSize: 22 }} />
+                </Box>
+                <Box>
+                    <Typography variant="h6" fontWeight={800} sx={{ lineHeight: 1.2, color: '#0f172a' }}>
+                        Kidney Stone Assessment
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                        Symptoms, diet, and lifestyle factors related to kidney stones
+                    </Typography>
+                </Box>
+            </Box>
             <QuestionBlock questions={QUESTIONS} answers={answers} handleAnswerChange={handleAnswerChange} />
         </Box>
     );

@@ -1,5 +1,7 @@
 import React from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Chip } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import PersonIcon from '@mui/icons-material/Person';
 import { QuestionBlock, YES_NO } from './QuestionUtils';
 
 const QUESTIONS = [
@@ -27,7 +29,23 @@ const QUESTIONS = [
 export const BaseQuestions = ({ answers, handleAnswerChange, patientDetails }) => {
     return (
         <Box>
-            <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>Basic Information</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                <Box sx={{
+                    p: 1, borderRadius: 2,
+                    background: 'linear-gradient(135deg, #00bcd4, #0097a7)',
+                    color: 'white', display: 'flex',
+                }}>
+                    <PersonIcon sx={{ fontSize: 22 }} />
+                </Box>
+                <Box>
+                    <Typography variant="h6" fontWeight={800} sx={{ lineHeight: 1.2, color: '#0f172a' }}>
+                        Basic Information
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                        Your demographic details and general health
+                    </Typography>
+                </Box>
+            </Box>
             <QuestionBlock questions={QUESTIONS} answers={answers} handleAnswerChange={handleAnswerChange} patientDetails={patientDetails} />
         </Box>
     );
