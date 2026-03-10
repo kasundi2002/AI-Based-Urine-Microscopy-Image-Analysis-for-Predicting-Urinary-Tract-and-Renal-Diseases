@@ -5,7 +5,7 @@ import {
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
-import Questionnaire from './Questionnaire';
+import Questionnaire from '../../components/Questionnaire/QuestionnaireContainer';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import FavoriteIcon from '@mui/icons-material/Favorite';
@@ -30,6 +30,7 @@ import ScienceIcon from '@mui/icons-material/Science';
 import { useAuth } from '../../context/AuthContext';
 import generateReport from '../../utils/generateReport';
 import { api } from '../../services/api';
+import AnalysisDetails from '../../components/AnalysisDetails';
 
 const BACKEND_URL = 'http://localhost:5000/api';
 
@@ -42,6 +43,7 @@ const PatientPortal = () => {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showQuestionnaire, setShowQuestionnaire] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [questionnaireCompleted, setQuestionnaireCompleted] = useState(false);
   const [riskPrediction, setRiskPrediction] = useState(null);
   const [patientInfo, setPatientInfo] = useState(storedPatientInfo);
@@ -53,36 +55,43 @@ const PatientPortal = () => {
 
   const getToken = () => patientToken || localStorage.getItem('patientToken') || localStorage.getItem('token');
 
-  useEffect(() => {
-    const fetchReport = async () => {
-      try {
-        setLoading(true);
-        const token = getToken();
-        if (!token) { setLoading(false); return; }
-        const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+  const fetchReport = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const token = getToken();
+      if (!token) { setLoading(false); return; }
+      const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
 
-        // Use the patient-specific endpoint that works with patient JWT
-        const res = await fetch(`${BACKEND_URL}/patient-access/my-report`, { headers });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to load report');
+      // Use the patient-specific endpoint that works with patient JWT
+      const res = await fetch(`${BACKEND_URL}/patient-access/my-report`, { headers });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load report');
 
-        // Update patient info from the response if available
-        if (data.patient) {
-          setPatientInfo(data.patient);
-          localStorage.setItem('patientInfo', JSON.stringify(data.patient));
-        }
-
-        if (data.reports?.length > 0) {
-          setReport(data.reports[0]); // Latest report
-        }
-      } catch (err) {
-        console.error('Failed to load report:', err);
-      } finally {
-        setLoading(false);
+      // Update patient info from the response if available
+      if (data.patient) {
+        setPatientInfo(data.patient);
+        localStorage.setItem('patientInfo', JSON.stringify(data.patient));
       }
-    };
+
+      if (data.reports?.length > 0) {
+        const latestReport = data.reports[0];
+        console.log("[PatientPortal] Fetched report riskPrediction:", latestReport.riskPrediction);
+        console.log("[PatientPortal] Combined risk:", latestReport.riskPrediction?.derivedRisks?.combinedRisk);
+        setReport(latestReport); // Latest report
+        if (latestReport.clinicalData?.raw && Object.keys(latestReport.clinicalData.raw).length > 0) {
+          setQuestionnaireCompleted(true);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load report:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [patientToken]);
+
+  useEffect(() => {
     fetchReport();
-  }, []);
+  }, [fetchReport]);
 
   const handleLogout = () => {
     clearPatientToken();
@@ -122,37 +131,39 @@ const PatientPortal = () => {
     const rawDiagnoses = analysis?.diagnosis?.diagnoses || analysis?.diagnosis;
     const diagnosesArray = Array.isArray(rawDiagnoses) ? rawDiagnoses : [];
 
-    if (diagnosesArray.length === 0) {
-      return { score: 20, level: 'Very Low Risk', mainDiagnoses: [] };
+    const nonNormal = diagnosesArray.filter(d => d.name !== 'Normal Urine Sediment');
+
+    if (nonNormal.length === 0) {
+      return { score: 0, level: 'Normal', mainDiagnoses: 'Normal Urine Sediment' };
     }
 
     const mapping = { High: 75, Moderate: 50, Low: 25 };
     let maxScore = 0;
 
-    diagnosesArray.forEach(d => {
+    nonNormal.forEach(d => {
       const s = mapping[d.probability] || 0;
       if (s > maxScore) maxScore = s;
     });
 
-    if (maxScore === 0) maxScore = 20;
-
-    const mainDiagnosesText = diagnosesArray
+    const mainDiagnosesText = nonNormal
       .filter(d => (mapping[d.probability] || 0) === maxScore)
       .map(d => d.name)
       .join(', ');
 
-    let levelLabel = 'Very Low Risk';
+    let levelLabel = 'Low Risk';
     if (maxScore >= 81) levelLabel = 'Critical Risk';
     else if (maxScore >= 61) levelLabel = 'High Risk';
     else if (maxScore >= 41) levelLabel = 'Moderate Risk';
     else if (maxScore >= 21) levelLabel = 'Low Risk';
+    else levelLabel = 'Normal';
 
-    return { score: maxScore, level: levelLabel, mainDiagnoses: mainDiagnosesText || 'None' };
+    return { score: maxScore, level: levelLabel, mainDiagnoses: mainDiagnosesText || 'Normal Urine Sediment' };
   })();
 
-  const riskScore = riskPrediction?.riskScore || mlDiagnosesData.score;
-  const isHighRisk = riskScore > 50;
-  const riskLabel = riskPrediction?.riskLabel || mlDiagnosesData.level;
+  const backendRisk = report?.riskPrediction?.derivedRisks?.combinedRisk;
+  const riskScore = backendRisk?.score !== undefined ? backendRisk.score : mlDiagnosesData.score;
+  const isHighRisk = riskScore >= 50;
+  const riskLabel = backendRisk?.riskLevel ? `${backendRisk.riskLevel} Risk` : mlDiagnosesData.level;
 
   const riskGradient = isHighRisk
     ? 'linear-gradient(135deg, #ef5350, #c62828)'
@@ -199,7 +210,9 @@ const PatientPortal = () => {
     date: reportDate, riskScore, riskLabel,
     wbc: sediments[0].value, rbc: sediments[1].value, crystals: sediments[2].value, bacteria: `${bacteriaCount}`,
     chemicalParameters: report.chemicalParameters,
-    questionnaireCompleted, enhancedRiskScore: riskPrediction?.riskScore, enhancedRiskLabel: riskPrediction?.riskLabel,
+    questionnaireCompleted,
+    enhancedRiskScore: backendRisk?.score,
+    enhancedRiskLabel: backendRisk?.riskLevel,
     prescription: doctorPrescription || 'No prescription added yet.',
     doctorNote: doctorNotes || 'No clinician notes available.',
   } : null;
@@ -269,22 +282,20 @@ const PatientPortal = () => {
     return () => window.removeEventListener('resize', onResize);
   }, [report, imageUrl]);
 
-  const handleQuestionnaireComplete = async (formData) => {
+  const handleQuestionnaireComplete = async (finalReportResult) => {
     try {
-      if (!report?._id) return;
       setLoading(true);
-      // Wait for 1-2 seconds visually if needed, but api call is enough
-      const prediction = await api.submitQuestionnaire(report._id, formData);
-      setRiskPrediction({
-        riskScore: prediction.finalScore,
-        riskLabel: `${prediction.riskLevel} Risk`
-      });
+      console.log("[PatientPortal] Questionnaire completed. Backend result:", finalReportResult);
+      console.log("[PatientPortal] Base Diagnosis Score:", finalReportResult?.derivedRisks?.combinedRisk?.baseDiagnosisScore);
+      console.log("[PatientPortal] Questionnaire Score:", finalReportResult?.derivedRisks?.combinedRisk?.questionnaireScore);
+      console.log("[PatientPortal] Final Score:", finalReportResult?.derivedRisks?.combinedRisk?.score);
+      await fetchReport(); // Fetch fully populated updated report
       setQuestionnaireCompleted(true);
       setShowQuestionnaire(false);
       setLoading(false);
     } catch (e) {
       console.error(e);
-      alert('Failed to submit questionnaire');
+      alert('Failed to complete questionnaire processing');
       setLoading(false);
     }
   };
@@ -305,7 +316,7 @@ const PatientPortal = () => {
           </Toolbar>
         </AppBar>
         <Box sx={{ pt: '72px', px: 3, pb: 4, maxWidth: 900, mx: 'auto' }}>
-          <Questionnaire reportId={report?._id} onComplete={handleQuestionnaireComplete} patientDetails={patientInfo} />
+          <Questionnaire reportId={report?._id} onComplete={handleQuestionnaireComplete} patientDetails={patientInfo} routing={report?.routing} />
         </Box>
       </Box>
     );
@@ -394,6 +405,19 @@ const PatientPortal = () => {
           </Box>
         </Paper>
 
+        {showDetails && report && (
+          <Box sx={{ mb: 3 }}>
+            <Button
+              variant="outlined"
+              onClick={() => setShowDetails(false)}
+              sx={{ textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
+            >
+              Back to Dashboard
+            </Button>
+            <AnalysisDetails report={report} />
+          </Box>
+        )}
+
         {/* No report */}
         {!report && (
           <Paper elevation={0} sx={{ p: 6, textAlign: 'center', borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
@@ -403,10 +427,10 @@ const PatientPortal = () => {
           </Paper>
         )}
 
-        {report && (
+        {report && !showDetails && (
           <>
             {/* Questionnaire CTA Banner */}
-            {!questionnaireCompleted && (
+            {!questionnaireCompleted && report?.routing?.action === 'PROCEED_TO_QUESTIONNAIRE' && (
               <Paper elevation={0} sx={{
                 p: 2.5, mb: 3, borderRadius: 3, animation: 'fadeIn 0.5s ease-out',
                 bgcolor: alpha('#2196f3', 0.04), border: '1px solid', borderColor: alpha('#2196f3', 0.15),
@@ -457,19 +481,46 @@ const PatientPortal = () => {
                     <Typography variant="h2" fontWeight={900} sx={{ textShadow: '0 4px 10px rgba(0,0,0,0.2)' }}>{riskScore}%</Typography>
                     <Typography variant="h6" fontWeight={700} sx={{ mt: 0.5, opacity: 0.9 }}>{riskLabel}</Typography>
                     <Typography variant="body2" sx={{ mt: 1.5, opacity: 0.75, maxWidth: '85%', mx: 'auto', lineHeight: 1.5 }}>
-                      {questionnaireCompleted ? 'Enhanced prediction combining lab analysis + health questionnaire data.' : 'Based on AI analysis of your urine microscopy sample.'}
+                      {questionnaireCompleted ? 'Enhanced clinical risk derived from combined laboratory tests and reported symptoms.' : 'Based on AI analysis of your urine microscopy sample.'}
                     </Typography>
-                    {questionnaireCompleted && (
-                      <Chip icon={<AutoAwesomeIcon sx={{ fontSize: 13, color: 'white !important' }} />} label="AI + Questionnaire" size="small" sx={{ mt: 2, bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600, fontSize: '0.7rem' }} />
-                    )}
-                    {!questionnaireCompleted && mlDiagnosesData.mainDiagnoses && mlDiagnosesData.mainDiagnoses.length > 0 && (
-                      <Box sx={{ mt: 2.5, p: 1.5, bgcolor: 'rgba(0,0,0,0.15)', borderRadius: 2, textAlign: 'left' }}>
+                    <Box sx={{ mt: 3, mb: 2 }}>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={() => setShowDetails(true)}
+                        sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 700, textTransform: 'none', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' } }}
+                      >
+                        View Detailed Analysis
+                      </Button>
+                    </Box>
+                    {mlDiagnosesData.mainDiagnoses && (
+                      <Box sx={{ mt: 1, p: 1.5, bgcolor: 'rgba(0,0,0,0.15)', borderRadius: 2, textAlign: 'left' }}>
                         <Typography variant="caption" sx={{ textTransform: 'uppercase', opacity: 0.8, fontWeight: 700, letterSpacing: 0.5 }}>
                           {mlDiagnosesData.mainDiagnoses.includes(',') ? 'Main Diagnoses:' : 'Main Diagnosis:'}
                         </Typography>
                         <Typography variant="body2" fontWeight={700} sx={{ mt: 0.3, lineHeight: 1.3 }}>
                           {mlDiagnosesData.mainDiagnoses}
                         </Typography>
+                      </Box>
+                    )}
+
+                    {questionnaireCompleted && report?.riskPrediction?.riskExplanation?.causes && (
+                      <Box sx={{ mt: 2.5, p: 2, bgcolor: 'rgba(0,0,0,0.15)', borderRadius: 2, textAlign: 'left', border: '1px solid', borderColor: 'rgba(255,255,255,0.2)' }}>
+                        <Typography variant="caption" sx={{ textTransform: 'uppercase', opacity: 0.8, fontWeight: 700, letterSpacing: 0.5 }}>
+                          Key Risk Factors Identified:
+                        </Typography>
+                        <Box component="ul" sx={{ pl: 2, m: 0, mt: 1 }}>
+                          {report.riskPrediction.riskExplanation.causes.map((exp, idx) => (
+                            <Typography component="li" key={idx} variant="body2" sx={{ opacity: 0.9, fontWeight: 500, lineHeight: 1.4, mb: 0.5 }}>
+                              {exp}
+                            </Typography>
+                          ))}
+                        </Box>
+                        {report.riskPrediction.disclaimer && (
+                          <Typography variant="caption" sx={{ mt: 2, display: 'block', opacity: 0.6, fontSize: '0.62rem', fontStyle: 'italic' }}>
+                            Disclaimer: {report.riskPrediction.disclaimer}
+                          </Typography>
+                        )}
                       </Box>
                     )}
                   </Box>

@@ -22,6 +22,9 @@ const hashToken = (token) =>
 
 // ─── Controllers ───────────────────────────────────────────────────────────
 
+import { getQuestionsForDiagnosis } from '../services/clinicalRiskEngine.js';
+import { getDiagnosisCategories } from '../config/diagnosisCategories.js';
+
 /**
  * @desc  Get the authenticated patient's latest report + patient info
  * @route GET /api/patient-access/my-report
@@ -39,7 +42,38 @@ export const getMyReport = async (req, res, next) => {
         // Get the latest report for this patient
         const reports = await Report.find({ patientId: patient._id })
             .sort({ createdAt: -1 })
-            .limit(5);
+            .limit(5)
+            .lean(); // Use lean to modify the object
+
+        if (reports && reports.length > 0) {
+            const latest = reports[0];
+            const diagnoses = latest.analysis?.diagnosis?.diagnoses || [];
+            const questionsRequired = getQuestionsForDiagnosis(diagnoses);
+            const categories = getDiagnosisCategories(diagnoses);
+
+            // Map diagnosis categories to frontend question block component names
+            const CATEGORY_BLOCK_MAP = {
+                infection: 'InfectionQuestions',
+                stone: 'StoneQuestions',
+                hematuria: 'HematuriaQuestions',
+                renal: 'RenalQuestions'
+            };
+
+            const blocks = ['BaseQuestions'];
+            categories.forEach(cat => {
+                if (CATEGORY_BLOCK_MAP[cat] && !blocks.includes(CATEGORY_BLOCK_MAP[cat])) {
+                    blocks.push(CATEGORY_BLOCK_MAP[cat]);
+                }
+            });
+
+            latest.routing = {
+                action: questionsRequired.length > 0 ? "PROCEED_TO_QUESTIONNAIRE" : "NORMAL",
+                categories: categories,
+                requiresUTIPipeline: categories.includes('infection'),
+                questions: questionsRequired,
+                blocks: blocks
+            };
+        }
 
         res.status(200).json({
             success: true,

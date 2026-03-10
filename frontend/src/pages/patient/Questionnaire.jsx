@@ -112,7 +112,7 @@ const emptyAnswers = (patientDetails) => {
   return answers;
 };
 
-const Questionnaire = ({ onComplete, patientDetails, reportId }) => {
+const Questionnaire = ({ onComplete, patientDetails, reportId, routing }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -136,12 +136,19 @@ const Questionnaire = ({ onComplete, patientDetails, reportId }) => {
   }, [patientDetails]);
 
   const questionsBySection = useMemo(() => {
-    return QUESTIONS.reduce((acc, question) => {
+    const includedIds = routing?.questions ? new Set(routing.questions) : new Set(QUESTIONS.map(q => q.id));
+    return QUESTIONS.filter(q => includedIds.has(q.id)).reduce((acc, question) => {
       if (!acc[question.section]) acc[question.section] = [];
       acc[question.section].push(question);
       return acc;
     }, {});
-  }, []);
+  }, [routing]);
+
+  const activeSections = useMemo(() => {
+    return SECTION_TITLES.map((title, idx) => ({ title, idx })).filter(sec => {
+      return questionsBySection[sec.idx] && questionsBySection[sec.idx].length > 0;
+    });
+  }, [questionsBySection]);
 
   useEffect(() => {
     if (answers.q2 !== 'Female' && answers.q3 !== 'No') {
@@ -195,15 +202,18 @@ const Questionnaire = ({ onComplete, patientDetails, reportId }) => {
     };
   }, [submitting, onComplete, answers, reportId]);
 
-  const visibleQuestions = (sectionIndex) => {
-    return (questionsBySection[sectionIndex] || []).filter((q) => {
+  const visibleQuestions = () => {
+    if (!activeSections.length) return [];
+    const secIdx = activeSections[activeStep].idx;
+    return (questionsBySection[secIdx] || []).filter((q) => {
       if (!q.condition) return true;
       return q.condition(answers);
     });
   };
 
   const validateStep = () => {
-    const missing = visibleQuestions(activeStep).filter((q) => {
+    if (!activeSections.length) return true;
+    const missing = visibleQuestions().filter((q) => {
       const key = `q${q.id}`;
       const value = answers[key];
       if (q.type === 'number') return value === '' || value === null;
@@ -211,7 +221,7 @@ const Questionnaire = ({ onComplete, patientDetails, reportId }) => {
     });
 
     if (missing.length > 0) {
-      setError(`Please answer all questions in ${SECTION_TITLES[activeStep]}.`);
+      setError(`Please answer all questions in ${activeSections[activeStep].title}.`);
       return false;
     }
 
@@ -229,7 +239,7 @@ const Questionnaire = ({ onComplete, patientDetails, reportId }) => {
 
   const handleNext = () => {
     if (!validateStep()) return;
-    if (activeStep === SECTION_TITLES.length - 1) {
+    if (activeStep >= activeSections.length - 1) {
       setSubmitting(true);
     } else {
       setActiveStep((prev) => prev + 1);
@@ -247,7 +257,7 @@ const Questionnaire = ({ onComplete, patientDetails, reportId }) => {
 
   const renderQuestion = (q) => {
     const value = answers[`q${q.id}`];
-    
+
     // Disable if automatically populated from patient details
     const isDisabled = Boolean((q.id === 1 && patientDetails?.age) || (q.id === 2 && patientDetails?.gender));
 
@@ -331,10 +341,10 @@ const Questionnaire = ({ onComplete, patientDetails, reportId }) => {
 
       <Box sx={{ px: 3, py: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
         <Stepper activeStep={activeStep} alternativeLabel>
-          {SECTION_TITLES.map((label) => (
-            <Step key={label}>
+          {activeSections.map((sec) => (
+            <Step key={sec.title}>
               <StepLabel>
-                <Typography variant="caption" fontWeight={600}>{label}</Typography>
+                <Typography variant="caption" fontWeight={600}>{sec.title}</Typography>
               </StepLabel>
             </Step>
           ))}
@@ -342,13 +352,13 @@ const Questionnaire = ({ onComplete, patientDetails, reportId }) => {
       </Box>
 
       <Box sx={{ px: 4, py: 3 }}>
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>{SECTION_TITLES[activeStep]}</Typography>
+        <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5 }}>{activeSections.length > 0 ? activeSections[activeStep].title : ''}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           Answer all questions in this section to continue.
         </Typography>
 
         <Grid container spacing={2.5}>
-          {visibleQuestions(activeStep).map((q) => (
+          {visibleQuestions().map((q) => (
             <Grid key={q.id} size={{ xs: 12 }}>
               <Paper elevation={0} sx={{ p: 2.2, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
                 <Typography variant="body2" fontWeight={600} sx={{ mb: 1.2 }}>
@@ -363,7 +373,7 @@ const Questionnaire = ({ onComplete, patientDetails, reportId }) => {
 
       <Box sx={{ px: 4, py: 2.5, borderTop: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Chip
-          label={`Section ${activeStep + 1} of ${SECTION_TITLES.length}`}
+          label={`Section ${activeStep + 1} of ${activeSections.length}`}
           size="small"
           sx={{ fontWeight: 600, fontSize: '0.72rem', bgcolor: alpha('#00bcd4', 0.08), color: '#0288d1' }}
         />
@@ -376,7 +386,7 @@ const Questionnaire = ({ onComplete, patientDetails, reportId }) => {
           )}
           <Button
             variant="contained"
-            endIcon={activeStep === SECTION_TITLES.length - 1 ? <SendIcon /> : <ArrowForwardIcon />}
+            endIcon={activeStep >= activeSections.length - 1 ? <SendIcon /> : <ArrowForwardIcon />}
             onClick={handleNext}
             sx={{
               textTransform: 'none',
@@ -386,7 +396,7 @@ const Questionnaire = ({ onComplete, patientDetails, reportId }) => {
               background: 'linear-gradient(135deg, #0f172a, #1e3a5f)',
             }}
           >
-            {activeStep === SECTION_TITLES.length - 1 ? 'Submit Questionnaire' : 'Next Section'}
+            {activeStep >= activeSections.length - 1 ? 'Submit Questionnaire' : 'Next Section'}
           </Button>
         </Box>
       </Box>

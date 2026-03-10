@@ -5,7 +5,7 @@ import os
 
 class ClinicalDataset1Model:
     def __init__(self):
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        base_dir = os.path.dirname(os.path.dirname(__file__))
         model_path = os.path.join(base_dir, "models", "clinical", "dataset1_lr.pkl")
         self.model = joblib.load(model_path)
         self.feature_order = ["age", "gender", "dysuria", "abd_pain", "fever", "polyuria"]

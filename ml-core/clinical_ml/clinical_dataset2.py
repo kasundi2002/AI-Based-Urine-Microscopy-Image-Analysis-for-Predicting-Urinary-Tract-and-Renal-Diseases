@@ -5,7 +5,7 @@ import os
 
 class ClinicalDataset2Model:
     def __init__(self):
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        base_dir = os.path.dirname(os.path.dirname(__file__))
         bladder_model_path = os.path.join(base_dir, "models", "clinical", "bladder_lr.pkl")
         renal_model_path = os.path.join(base_dir, "models", "clinical", "renal_lr.pkl")
 

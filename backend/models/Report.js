@@ -42,10 +42,7 @@ const reportSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.Mixed
     },
     riskPrediction: {
-        diagnosisScore: Number,
-        questionnaireScore: Number,
-        finalScore: Number,
-        riskLevel: String
+        type: mongoose.Schema.Types.Mixed // Full risk prediction data (derivedRisks, explanations, etc.)
     }
 }, {
     timestamps: true

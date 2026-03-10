@@ -4,8 +4,8 @@ import ClinicalVerification from '../models/ClinicalVerification.js';
 import fs from 'fs';
 import axios from 'axios';
 import FormData from 'form-data';
-import { calculateFinalRisk } from '../services/riskEngine.js';
-
+import { calculateFinalRisk, getQuestionsForDiagnosis, generateRiskExplanation } from '../services/clinicalRiskEngine.js';
+import { getDiagnosisCategories } from '../config/diagnosisCategories.js';
 const toNumber = (value) => {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
@@ -34,22 +34,14 @@ const getCount = (particles, key) => {
 };
 
 const detectImageBasedUTI = (analysis = {}) => {
-    const particles = getParticles(analysis);
-    const wbcCount = getCount(particles, 'wbc');
-    const yeastCount = getCount(particles, 'yeast');
-
-    const bacteria = particles?.bacteria || {};
-    const bacteriaCount = getCount(particles, 'bacteria');
-    const ecoliCount = toNumber(bacteria.ecoli_count);
-    const bacteriaRisk = String(bacteria?.risk_assessment?.level || '').toLowerCase();
-    const bacteriaDetected = bacteriaCount > 0 || ecoliCount > 0 || bacteriaRisk.includes('positive');
-
     const diagnoses = analysis?.diagnosis?.diagnoses;
-    const diagnosisUti = Array.isArray(diagnoses)
-        ? diagnoses.some((d) => String(d?.name || '').toLowerCase().includes('urinary tract infection'))
-        : false;
-
-    return (wbcCount >= 5 || bacteriaDetected || yeastCount >= 3 || diagnosisUti);
+    if (Array.isArray(diagnoses)) {
+        return diagnoses.some((d) =>
+            String(d?.name || '').toLowerCase().includes('urinary tract infection') ||
+            String(d?.name || '').toLowerCase().includes('uti')
+        );
+    }
+    return false;
 };
 
 const buildClinicalPayload = (questionnaireData = {}) => {
@@ -133,8 +125,8 @@ export const uploadImage = async (req, res, next) => {
 
         const utiDetectedFromImage = detectImageBasedUTI(mlResponse.data);
 
-        res.status(200).json({ 
-            success: true, 
+        res.status(200).json({
+            success: true,
             data: {
                 imageUrl: `/uploads/${req.file.filename}`,
                 analysis: mlResponse.data,
@@ -202,7 +194,35 @@ export const getReport = async (req, res, next) => {
             verification = await ClinicalVerification.findOne({ reportId: report._id }).sort({ createdAt: -1 });
         }
 
-        res.status(200).json({ success: true, data: { ...report._doc, verification } });
+        // Add routing info
+        const diagnoses = report.analysis?.diagnosis?.diagnoses || [];
+        const questionsRequired = getQuestionsForDiagnosis(diagnoses);
+        const categories = getDiagnosisCategories(diagnoses);
+
+        // Map diagnosis categories to frontend question block component names
+        const CATEGORY_BLOCK_MAP = {
+            infection: 'InfectionQuestions',
+            stone: 'StoneQuestions',
+            hematuria: 'HematuriaQuestions',
+            renal: 'RenalQuestions'
+        };
+
+        const blocks = ['BaseQuestions'];
+        categories.forEach(cat => {
+            if (CATEGORY_BLOCK_MAP[cat] && !blocks.includes(CATEGORY_BLOCK_MAP[cat])) {
+                blocks.push(CATEGORY_BLOCK_MAP[cat]);
+            }
+        });
+
+        const routing = {
+            action: questionsRequired.length > 0 ? "PROCEED_TO_QUESTIONNAIRE" : "NORMAL",
+            categories: categories,
+            requiresUTIPipeline: categories.includes('infection'),
+            questions: questionsRequired,
+            blocks: blocks
+        };
+
+        res.status(200).json({ success: true, data: { ...report._doc, verification, routing } });
     } catch (error) {
         next(error);
     }
@@ -276,40 +296,69 @@ export const submitQuestionnaire = async (req, res, next) => {
             return res.status(404).json({ success: false, error: 'Report not found' });
         }
 
+        const diagnoses = report.analysis?.diagnosis?.diagnoses || [];
+        const categories = getDiagnosisCategories(diagnoses);
+        const requiresUTIPipeline = categories.includes('infection');
+
         const clinicalPayload = buildClinicalPayload(questionnaireData);
         let updatedAnalysis = report.analysis || {};
+        let utiMLResult = null;
 
-        if (report.utiDetectedFromImage && report.imageUrl) {
+        if (requiresUTIPipeline) {
             try {
-                const imagePath = `./public${report.imageUrl}`;
-                if (fs.existsSync(imagePath)) {
-                    const metadataFormData = new FormData();
-                    metadataFormData.append('file', fs.createReadStream(imagePath));
+                const reqPayload = {
+                    particle_features: report.analysis?.particles || {},
+                    questionnaire_answers: clinicalPayload
+                };
 
-                    Object.entries(clinicalPayload).forEach(([key, value]) => {
-                        if (value !== undefined && value !== null) {
-                            metadataFormData.append(key, value);
-                        }
-                    });
+                const utiAnalysis = await axios.post('http://localhost:8000/analyze-uti', reqPayload, {
+                    headers: { 'Content-Type': 'application/json' }
+                });
 
-                    const utiAnalysis = await axios.post('http://localhost:8000/analyze-with-metadata', metadataFormData, {
-                        headers: {
-                            ...metadataFormData.getHeaders()
-                        }
-                    });
+                utiMLResult = {
+                    clinical_dataset1: utiAnalysis.data?.clinical_dataset1 || null,
+                    clinical_dataset2: utiAnalysis.data?.clinical_dataset2 || null,
+                    fusion: utiAnalysis.data?.fusion || null,
+                    uti_rules: utiAnalysis.data?.uti_rules || null
+                };
 
-                    updatedAnalysis = {
-                        ...(report.analysis || {}),
-                        clinical_dataset1: utiAnalysis.data?.clinical_dataset1 || null,
-                        clinical_dataset2: utiAnalysis.data?.clinical_dataset2 || null,
-                        fusion: utiAnalysis.data?.fusion || null,
-                        uti_rules: utiAnalysis.data?.uti_rules || null
-                    };
-                }
+                updatedAnalysis = {
+                    ...(report.analysis || {}),
+                    ...utiMLResult
+                };
             } catch (error) {
                 console.error('UTI Clinical Analysis Error:', error.message);
             }
         }
+
+        // Calculate unified disease risk
+        const riskResult = calculateFinalRisk(diagnoses, questionnaireData);
+
+        console.log("[submitQuestionnaire] Base Diagnosis Score:", riskResult.baseDiagnosisScore);
+        console.log("[submitQuestionnaire] Questionnaire Score:", riskResult.questionnaireScore);
+        console.log("[submitQuestionnaire] Final Score:", riskResult.finalScore);
+        console.log("[submitQuestionnaire] Risk Level:", riskResult.riskLevel);
+
+        const explanations = ["Centralized risk engine computed combined medical history and laboratory state."];
+        const riskExplanation = generateRiskExplanation(diagnoses, report.analysis?.particles, questionnaireData);
+
+        const finalReportResult = {
+            patientId: report.patientId,
+            detectedCategories: categories,
+            derivedRisks: {
+                combinedRisk: {
+                    riskLevel: riskResult.riskLevel,
+                    score: riskResult.finalScore,
+                    baseDiagnosisScore: riskResult.baseDiagnosisScore,
+                    questionnaireScore: riskResult.questionnaireScore
+                }
+            },
+            utiMLResult,
+            explanations,
+            riskExplanation,
+            disclaimer: "This system provides risk analysis based on urine microscopy findings and questionnaire responses. It is not a medical diagnosis and should not replace professional medical consultation.",
+            timestamp: new Date()
+        };
 
         report = await Report.findByIdAndUpdate(
             reportId,
@@ -319,6 +368,7 @@ export const submitQuestionnaire = async (req, res, next) => {
                     mappedForUti: clinicalPayload,
                 },
                 analysis: updatedAnalysis,
+                riskPrediction: finalReportResult,
                 status: 'Pending Verification'
             },
             {
@@ -327,7 +377,14 @@ export const submitQuestionnaire = async (req, res, next) => {
             }
         );
 
-        res.status(200).json({ success: true, data: report });
+        // Optionally send final report back exactly as requested
+        const finalResponse = {
+            success: true,
+            data: report,
+            report: finalReportResult // Explicitly placing it in response too
+        };
+
+        res.status(200).json(finalResponse);
     } catch (error) {
         next(error);
     }
