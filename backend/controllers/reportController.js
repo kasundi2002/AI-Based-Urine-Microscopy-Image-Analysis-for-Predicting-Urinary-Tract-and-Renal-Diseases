@@ -4,6 +4,7 @@ import ClinicalVerification from '../models/ClinicalVerification.js';
 import fs from 'fs';
 import axios from 'axios';
 import FormData from 'form-data';
+import { calculateFinalRisk } from '../services/riskEngine.js';
 
 const toNumber = (value) => {
     const parsed = Number(value);
@@ -93,7 +94,7 @@ export const getReports = async (req, res, next) => {
         if (req.query.patientId) {
             query.patientId = req.query.patientId;
         }
-        
+
         const reports = await Report.find(query)
             .sort({ createdAt: -1 })
             .populate('patientId', 'name patientId age status riskAssessment dateAssigned')
@@ -161,7 +162,7 @@ export const submitReport = async (req, res, next) => {
         else if (riskLevel === 'Moderate Risk') mappedRisk = 'Moderate';
         else if (riskLevel === 'Low Risk') mappedRisk = 'Low';
 
-        await Patient.findByIdAndUpdate(patientId, { 
+        await Patient.findByIdAndUpdate(patientId, {
             status: 'Ready for Review',
             riskAssessment: mappedRisk
         });
@@ -222,7 +223,7 @@ export const verifyReport = async (req, res, next) => {
 
         // 1. Update or Create ClinicalVerification document
         let verification = await ClinicalVerification.findOne({ reportId: report._id });
-        
+
         if (verification) {
             verification.agreement = agreement || 'agree';
             verification.clinicalNotes = notes || '';

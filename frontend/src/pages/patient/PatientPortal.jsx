@@ -29,6 +29,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ScienceIcon from '@mui/icons-material/Science';
 import { useAuth } from '../../context/AuthContext';
 import generateReport from '../../utils/generateReport';
+import { api } from '../../services/api';
 
 const BACKEND_URL = 'http://localhost:5000/api';
 
@@ -117,13 +118,41 @@ const PatientPortal = () => {
   const yeastCount = getCount(yeastData);
   const bacteriaCount = getCount(bacteriaData);
   const totalDetections = wbcCount + rbcCount + crystalCount + castCount + yeastCount + bacteriaCount;
-  const riskLevel = analysis?.risk_level || patientInfo?.riskAssessment || 'Low';
+  const mlDiagnosesData = (() => {
+    const rawDiagnoses = analysis?.diagnosis?.diagnoses || analysis?.diagnosis;
+    const diagnosesArray = Array.isArray(rawDiagnoses) ? rawDiagnoses : [];
 
-  const baseRiskScore = riskLevel === 'High' ? 75 : riskLevel === 'Moderate' ? 45 : 20;
-  const riskScore = riskPrediction?.riskScore || baseRiskScore;
+    if (diagnosesArray.length === 0) {
+      return { score: 20, level: 'Very Low Risk', mainDiagnoses: [] };
+    }
+
+    const mapping = { High: 75, Moderate: 50, Low: 25 };
+    let maxScore = 0;
+
+    diagnosesArray.forEach(d => {
+      const s = mapping[d.probability] || 0;
+      if (s > maxScore) maxScore = s;
+    });
+
+    if (maxScore === 0) maxScore = 20;
+
+    const mainDiagnosesText = diagnosesArray
+      .filter(d => (mapping[d.probability] || 0) === maxScore)
+      .map(d => d.name)
+      .join(', ');
+
+    let levelLabel = 'Very Low Risk';
+    if (maxScore >= 81) levelLabel = 'Critical Risk';
+    else if (maxScore >= 61) levelLabel = 'High Risk';
+    else if (maxScore >= 41) levelLabel = 'Moderate Risk';
+    else if (maxScore >= 21) levelLabel = 'Low Risk';
+
+    return { score: maxScore, level: levelLabel, mainDiagnoses: mainDiagnosesText || 'None' };
+  })();
+
+  const riskScore = riskPrediction?.riskScore || mlDiagnosesData.score;
   const isHighRisk = riskScore > 50;
-  const riskLabel = riskPrediction?.riskLabel ||
-    (riskLevel === 'High' ? 'High Risk Detected' : riskLevel === 'Moderate' ? 'Moderate Risk' : 'Low Risk');
+  const riskLabel = riskPrediction?.riskLabel || mlDiagnosesData.level;
 
   const riskGradient = isHighRisk
     ? 'linear-gradient(135deg, #ef5350, #c62828)'
@@ -240,89 +269,24 @@ const PatientPortal = () => {
     return () => window.removeEventListener('resize', onResize);
   }, [report, imageUrl]);
 
-  const handleQuestionnaireComplete = (formData) => {
-    const prediction = generateRiskPrediction(formData, report);
-    setRiskPrediction(prediction);
-    setQuestionnaireCompleted(true);
-    setShowQuestionnaire(false);
-  };
-
-  const generateRiskPrediction = (q, r) => {
-    const isYes = (key) => String(q?.[key] || '').toLowerCase() === 'yes';
-    const countYes = (keys) => keys.reduce((n, key) => n + (isYes(key) ? 1 : 0), 0);
-    const waterLow = (q?.q28 || '') === 'Less than 1 liter';
-    const waterMid = (q?.q28 || '') === '1-2 liters';
-
-    const mappings = {
-      uti: ['q4', 'q5', 'q6', 'q10', 'q11', 'q13', 'q14', 'q15', 'q18'],
-      lowerUti: ['q4', 'q5', 'q6', 'q10'],
-      upperUti: ['q11', 'q13', 'q14', 'q15'],
-      yeastUti: ['q4', 'q5', 'q22', 'q26'],
-      kidneyStone: ['q7', 'q11', 'q12', 'q13', 'q14', 'q24', 'q29', 'q30', 'q31'],
-      hematuria: ['q7', 'q8', 'q11', 'q12', 'q18', 'q24', 'q32'],
-      rbcCast: ['q7', 'q8', 'q11'],
-      wbcCast: ['q14', 'q15', 'q18', 'q19'],
-      granularCast: ['q17', 'q9', 'q25', 'q27'],
-      waxyCast: ['q16', 'q20', 'q21', 'q22', 'q17', 'q9'],
-    };
-
-    const age = parseInt(q?.q1, 10) || 0;
-    const lowerUtiScore = countYes(mappings.lowerUti);
-    const upperUtiScore = countYes(mappings.upperUti);
-    const utiScore = countYes(mappings.uti);
-    const yeastUtiScore = countYes(mappings.yeastUti);
-    const kidneyStoneScore = countYes(mappings.kidneyStone) + (waterLow ? 2 : waterMid ? 1 : 0);
-    const hematuriaScore = countYes(mappings.hematuria) + (age >= 50 ? 1 : 0);
-    const castScore =
-      countYes(mappings.rbcCast) +
-      countYes(mappings.wbcCast) +
-      countYes(mappings.granularCast) +
-      countYes(mappings.waxyCast) +
-      (waterLow ? 1 : 0);
-
-    let score = 12;
-    score += utiScore * 2;
-    score += lowerUtiScore >= 3 ? 5 : 0;
-    score += upperUtiScore >= 2 ? 6 : 0;
-    score += yeastUtiScore >= 3 ? 6 : 0;
-    score += kidneyStoneScore * 2;
-    score += hematuriaScore * 2;
-    score += Math.round(castScore * 1.5);
-
-    if (age >= 60) score += 8;
-    else if (age >= 45) score += 4;
-
-    if (isYes('q33')) score += 3;
-    if (r?.analysis?.risk_level === 'High') score += 12;
-    else if (r?.analysis?.risk_level === 'Moderate') score += 6;
-
-    if (r?.chemicalParameters) {
-      const c = r.chemicalParameters;
-      if (c.protein && c.protein !== 'Nil') score += 6;
-      if (c.glucose && c.glucose !== 'Nil') score += 4;
-      if (c.blood && c.blood !== 'Nil') score += 8;
-      if (c.nitrite === 'Positive') score += 7;
+  const handleQuestionnaireComplete = async (formData) => {
+    try {
+      if (!report?._id) return;
+      setLoading(true);
+      // Wait for 1-2 seconds visually if needed, but api call is enough
+      const prediction = await api.submitQuestionnaire(report._id, formData);
+      setRiskPrediction({
+        riskScore: prediction.finalScore,
+        riskLabel: `${prediction.riskLevel} Risk`
+      });
+      setQuestionnaireCompleted(true);
+      setShowQuestionnaire(false);
+      setLoading(false);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to submit questionnaire');
+      setLoading(false);
     }
-
-    score = Math.max(5, Math.min(score, 95));
-
-    const dominantPattern = (() => {
-      const items = [
-        { key: 'UTI', value: utiScore + upperUtiScore },
-        { key: 'Kidney Stone', value: kidneyStoneScore },
-        { key: 'Hematuria/RBC', value: hematuriaScore },
-        { key: 'Kidney Cast Disease', value: castScore },
-      ];
-      items.sort((a, b) => b.value - a.value);
-      return items[0].value > 0 ? items[0].key : 'General Urinary';
-    })();
-
-    let label = 'Low Risk - Monitor and stay hydrated';
-    if (score > 60) label = `High Risk - ${dominantPattern} pattern, immediate consultation recommended`;
-    else if (score > 40) label = `Moderate Risk - ${dominantPattern} pattern, follow-up advised`;
-    else if (score > 25) label = `Low-Moderate Risk - ${dominantPattern} pattern, monitor closely`;
-
-    return { riskScore: score, riskLabel: label };
   };
 
   // ── Questionnaire View ──
@@ -497,6 +461,16 @@ const PatientPortal = () => {
                     </Typography>
                     {questionnaireCompleted && (
                       <Chip icon={<AutoAwesomeIcon sx={{ fontSize: 13, color: 'white !important' }} />} label="AI + Questionnaire" size="small" sx={{ mt: 2, bgcolor: 'rgba(255,255,255,0.2)', color: 'white', fontWeight: 600, fontSize: '0.7rem' }} />
+                    )}
+                    {!questionnaireCompleted && mlDiagnosesData.mainDiagnoses && mlDiagnosesData.mainDiagnoses.length > 0 && (
+                      <Box sx={{ mt: 2.5, p: 1.5, bgcolor: 'rgba(0,0,0,0.15)', borderRadius: 2, textAlign: 'left' }}>
+                        <Typography variant="caption" sx={{ textTransform: 'uppercase', opacity: 0.8, fontWeight: 700, letterSpacing: 0.5 }}>
+                          {mlDiagnosesData.mainDiagnoses.includes(',') ? 'Main Diagnoses:' : 'Main Diagnosis:'}
+                        </Typography>
+                        <Typography variant="body2" fontWeight={700} sx={{ mt: 0.3, lineHeight: 1.3 }}>
+                          {mlDiagnosesData.mainDiagnoses}
+                        </Typography>
+                      </Box>
                     )}
                   </Box>
                 </Paper>

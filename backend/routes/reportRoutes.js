@@ -47,6 +47,9 @@ router.route('/upload')
 router.route('/submit')
     .post(protect, authorize('MLT'), submitReport);
 
+router.route('/questionnaire')
+    .post(submitQuestionnaire);
+
 router.route('/:id')
     .get(protect, getReport);
 
