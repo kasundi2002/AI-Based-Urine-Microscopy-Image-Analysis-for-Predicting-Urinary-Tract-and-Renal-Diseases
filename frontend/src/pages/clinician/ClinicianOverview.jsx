@@ -334,7 +334,7 @@ const ClinicianOverview = ({ onNavigate }) => {
                     </Box>
                     
                     {reports.slice(0, 3).map((r, i) => {
-                        const pat = patients.find(p => p._id === (typeof r.patientId === 'object' ? r.patientId._id : r.patientId));
+                        const pat = patients.find(p => p._id === (r.patientId && typeof r.patientId === 'object' ? r.patientId._id : r.patientId));
                         const patName = pat?.name || 'Unknown Patient';
                         const timeStr = new Date(r.createdAt || Date.now()).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                         const dateStr = new Date(r.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
