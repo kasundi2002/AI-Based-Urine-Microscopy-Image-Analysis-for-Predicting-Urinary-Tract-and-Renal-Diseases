@@ -62,16 +62,16 @@ DIAGNOSIS_RULES = [
         "name": "Severe Bacterial Infection",
         "levels": {
             "High": [
-                {"feature": "wbc_total", "op": ">", "value": 50},
-                {"feature": "bacteria_total", "op": ">", "value": 100}
+                {"feature": "wbc_total", "op": ">", "value": 20},
+                {"feature": "bacteria_total", "op": ">", "value": 20}
             ],
             "Moderate": [
-                {"feature": "wbc_total", "op": ">", "value": 35},
-                {"feature": "bacteria_total", "op": ">", "value": 75}
+                {"feature": "wbc_total", "op": ">", "value": 10},
+                {"feature": "bacteria_total", "op": ">", "value": 10}
             ],
             "Low": [
-                {"feature": "wbc_total", "op": ">", "value": 25},
-                {"feature": "bacteria_total", "op": ">", "value": 50}
+                {"feature": "wbc_total", "op": ">", "value": 5},
+                {"feature": "bacteria_total", "op": ">", "value": 5}
             ]
         }
     },
@@ -79,18 +79,12 @@ DIAGNOSIS_RULES = [
         "name": "Pyelonephritis",
         "levels": {
             "High": [
-                {"feature": "wbc_total", "op": ">", "value": 30},
-                {"feature": "bacteria_total", "op": ">", "value": 30},
                 {"feature": "cast_wbc", "op": ">=", "value": 2}
             ],
             "Moderate": [
-                {"feature": "wbc_total", "op": ">", "value": 20},
-                {"feature": "bacteria_total", "op": ">", "value": 20},
                 {"feature": "cast_wbc", "op": ">=", "value": 1}
             ],
             "Low": [
-                {"feature": "wbc_total", "op": ">", "value": 15},
-                {"feature": "bacteria_total", "op": ">", "value": 15},
                 {"feature": "cast_wbc", "op": ">=", "value": 1}
             ]
         }
@@ -147,7 +141,7 @@ DIAGNOSIS_RULES = [
                 {"feature": "cast_waxy", "op": "==", "value": 0}
             ],
             "Moderate": [
-                {"feature": "cast_granular", "op": ">=", "value": 3},
+                {"feature": "cast_granular", "op": ">=", "value": 2},
                 {"feature": "cast_waxy", "op": "==", "value": 0}
             ],
             "Low": [
@@ -186,7 +180,7 @@ DIAGNOSIS_RULES = [
         "levels": {
             "High": [{"feature": "crystal_uric_acid", "op": ">", "value": 15}],
             "Moderate": [{"feature": "crystal_uric_acid", "op": ">", "value": 8}],
-            "Low": [{"feature": "crystal_uric_acid", "op": ">", "value": 3}]
+            "Low": [{"feature": "crystal_uric_acid", "op": ">", "value": 2}]
         }
     },
     {
@@ -194,7 +188,7 @@ DIAGNOSIS_RULES = [
         "levels": {
             "High": [{"feature": "crystal_phosphate", "op": ">", "value": 15}],
             "Moderate": [{"feature": "crystal_phosphate", "op": ">", "value": 8}],
-            "Low": [{"feature": "crystal_phosphate", "op": ">", "value": 3}]
+            "Low": [{"feature": "crystal_phosphate", "op": ">", "value": 2}]
         }
     },
     {
