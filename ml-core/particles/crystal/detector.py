@@ -28,7 +28,7 @@ class CrystalDetector(BaseDetector):
             raise ValueError("Could not decode image bytes")
 
         # Run inference
-        results = self.model(img, conf=0.25)
+        results = self.model(img, conf=0.35)
 
         detections = []
         # Process results

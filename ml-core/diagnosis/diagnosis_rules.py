@@ -2,8 +2,8 @@ DIAGNOSIS_RULES = [
     {
         "name": "Hematuria",
         "levels": {
-            "High": [{"feature": "rbc_total", "op": ">", "value": 25}],
-            "Moderate": [{"feature": "rbc_total", "op": ">", "value": 10}],
+            "High": [{"feature": "rbc_total", "op": ">", "value": 20}],
+            "Moderate": [{"feature": "rbc_total", "op": ">", "value": 5}],
             "Low": [{"feature": "rbc_total", "op": ">", "value": 3}]
         }
     },
@@ -11,16 +11,16 @@ DIAGNOSIS_RULES = [
         "name": "Glomerular Hematuria",
         "levels": {
             "High": [
-                {"feature": "rbc_total", "op": ">", "value": 25},
-                {"feature": "dysmorphic_rbc_percentage", "op": ">", "value": 50}
+                {"feature": "rbc_total", "op": ">", "value": 20},
+                {"feature": "dysmorphic_rbc_percentage", "op": ">", "value":20}
             ],
             "Moderate": [
                 {"feature": "rbc_total", "op": ">", "value": 10},
-                {"feature": "dysmorphic_rbc_percentage", "op": ">", "value": 30}
+                {"feature": "dysmorphic_rbc_percentage", "op": ">", "value": 10}
             ],
             "Low": [
                 {"feature": "rbc_total", "op": ">", "value": 5},
-                {"feature": "dysmorphic_rbc_percentage", "op": ">", "value": 20}
+                {"feature": "dysmorphic_rbc_percentage", "op": ">", "value": 5}
             ]
         }
     },
@@ -29,15 +29,15 @@ DIAGNOSIS_RULES = [
         "levels": {
             "High": [
                 {"feature": "rbc_total", "op": ">", "value": 25},
-                {"feature": "isomorphic_rbc_percentage", "op": ">", "value": 80}
+                {"feature": "isomorphic_rbc_percentage", "op": ">", "value": 60}
             ],
             "Moderate": [
                 {"feature": "rbc_total", "op": ">", "value": 10},
-                {"feature": "isomorphic_rbc_percentage", "op": ">", "value": 50}
+                {"feature": "isomorphic_rbc_percentage", "op": ">", "value": 40}
             ],
             "Low": [
-                {"feature": "rbc_total", "op": ">", "value": 5},
-                {"feature": "isomorphic_rbc_percentage", "op": ">", "value": 40}
+                {"feature": "rbc_total", "op": ">", "value": 4},
+                {"feature": "isomorphic_rbc_percentage", "op": ">", "value": 20}
             ]
         }
     },
@@ -45,16 +45,16 @@ DIAGNOSIS_RULES = [
         "name": "Urinary Tract Infection",
         "levels": {
             "High": [
-                {"feature": "wbc_total", "op": ">", "value": 20},
-                {"feature": "bacteria_total", "op": ">", "value": 20}
-            ],
-            "Moderate": [
                 {"feature": "wbc_total", "op": ">", "value": 10},
                 {"feature": "bacteria_total", "op": ">", "value": 10}
             ],
-            "Low": [
+            "Moderate": [
                 {"feature": "wbc_total", "op": ">", "value": 5},
                 {"feature": "bacteria_total", "op": ">", "value": 5}
+            ],
+            "Low": [
+                {"feature": "wbc_total", "op": ">", "value": 1},
+                {"feature": "bacteria_total", "op": ">", "value": 1}
             ]
         }
     },
