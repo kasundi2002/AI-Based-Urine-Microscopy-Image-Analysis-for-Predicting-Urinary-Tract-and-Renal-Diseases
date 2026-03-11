@@ -45,7 +45,7 @@ class BacteriaDetector(BaseDetector):
         if image is None:
             raise ValueError("Could not decode image bytes")
 
-        results = self.model(image, conf=0.25)
+        results = self.model(image, conf=0.50)
         detections = {"boxes": [], "count": 0}
 
         if results and len(results) > 0:

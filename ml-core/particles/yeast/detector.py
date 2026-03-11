@@ -21,7 +21,7 @@ class YeastDetector(BaseDetector):
         image_rgb = np.array(image)
 
         # Process inference lowering native conf threshold to boost sensitivity for microscopic dots
-        results = self.model(image_rgb, conf=0.15)
+        results = self.model(image_rgb, conf=0.70)
         
         boxes_out = []
         count = 0
