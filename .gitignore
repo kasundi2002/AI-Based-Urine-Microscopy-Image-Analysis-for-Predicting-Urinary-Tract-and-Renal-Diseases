@@ -17,3 +17,6 @@
 *.pkl
 __pycache__/
 .env
+node_modules/
+dist/
+backend/public/uploads/
