@@ -18,7 +18,7 @@ class RBCDetector(BaseDetector):
         image_rgb = np.array(image)
 
         # Process inference lowering native conf threshold to boost sensitivity for microscopic dots
-        results = self.model.predict(image_rgb, conf=0.59, verbose=False)
+        results = self.model.predict(image_rgb, conf=0.25, verbose=False)
         
         boxes_out = []
         count = 0

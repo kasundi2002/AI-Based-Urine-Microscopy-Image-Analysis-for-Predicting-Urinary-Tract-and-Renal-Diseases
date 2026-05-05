@@ -18,6 +18,10 @@ class UTIRequest(BaseModel):
     particle_features: dict
     questionnaire_answers: dict
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 @app.post("/analyze-image")
 async def analyze_image(file: UploadFile = File(...)):
     image_bytes = await file.read()

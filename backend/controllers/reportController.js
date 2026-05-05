@@ -13,6 +13,8 @@ import {
     mapUTIMLToRisk
 } from '../services/clinicalRiskEngine.js';
 import { getDiagnosisCategories } from '../config/diagnosisCategories.js';
+const ML_CORE_URL = process.env.ML_CORE_URL || 'http://localhost:8000';
+
 const toNumber = (value) => {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
@@ -120,7 +122,7 @@ export const uploadImage = async (req, res, next) => {
 
         let mlResponse;
         try {
-            mlResponse = await axios.post('http://localhost:8000/analyze-image', formData, {
+            mlResponse = await axios.post(`${ML_CORE_URL}/analyze-image`, formData, {
                 headers: {
                     ...formData.getHeaders()
                 }
@@ -328,7 +330,7 @@ export const submitQuestionnaire = async (req, res, next) => {
                 };
 
                 const utiAnalysis = await axios.post(
-                    'http://localhost:8000/analyze-uti',
+                    `${ML_CORE_URL}/analyze-uti`,
                     utiPayload,
                     { headers: { 'Content-Type': 'application/json' } }
                 );
